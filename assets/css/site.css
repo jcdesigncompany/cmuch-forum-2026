@@ -21,6 +21,8 @@ a{color:var(--blue)}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;min-width:0}
 .brand img{width:36px;height:36px}
 .brand span{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand em{font-style:normal}
+@media (max-width:520px){.brand span{white-space:normal;font-size:14px;line-height:1.3}.brand em{display:block}}
 .topnav{margin-left:auto;display:flex;gap:4px}
 .topnav a{color:#C9D6F5;text-decoration:none;font-size:15px;padding:8px 12px;border-radius:8px}
 .topnav a:hover,.topnav a.on{color:#fff;background:rgba(255,255,255,.1)}
