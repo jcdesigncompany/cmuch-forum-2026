@@ -467,7 +467,7 @@ async function zipAll() {
 function staffView() {
   const pend = st.staff.filter(s => s.role === "pending");
   return `<div class="cols"><section class="panel"><h2>工作人員帳號</h2>${pend.length ? `<div class="note" style="margin-bottom:14px">有 ${pend.length} 個帳號等待核定權限。</div>` : ""}
-    <div class="tblw"><table class="tbl"><thead><tr><th>姓名／電子郵件</th><th>權限</th><th></th></tr></thead><tbody>${st.staff.map(s => `<tr><td><b>${esc(s.display_name || "（未填姓名）")}</b><div class="hint" style="margin:0">${esc(s.email)}</div></td>
+    <div class="tblw"><table class="tbl"><thead><tr><th>姓名／電子郵件</th><th>權限</th><th></th></tr></thead><tbody>${st.staff.map(s => `<tr><td><input class="dname" data-dname="${esc(s.user_id)}" value="${esc(s.display_name || "")}" placeholder="輸入姓名" maxlength="30" aria-label="${esc(s.email)} 的姓名"><div class="hint" style="margin:2px 0 0">${esc(s.email)}</div></td>
       <td><select data-role="${esc(s.user_id)}"${s.user_id === st.me ? " disabled" : ""} aria-label="權限">${["pending", "viewer", "checkin", "admin"].map(k => `<option value="${k}"${s.role === k ? " selected" : ""}>${ROLE_NAME[k]}</option>`).join("")}</select></td>
       <td class="acts">${s.user_id === st.me ? '<span class="hint">本人</span>' : `<button class="btn sm danger" data-rmstaff="${esc(s.user_id)}">移除</button>`}</td></tr>`).join("")}</tbody></table></div></section>
     <section class="panel"><h2>權限說明</h2><div class="tblw"><table class="tbl perm"><thead><tr><th>權限</th><th>可執行</th></tr></thead><tbody>
@@ -476,7 +476,7 @@ function staffView() {
       <tr><td><b>檢視者</b></td><td>查看名單與即時統計</td></tr>
       <tr><td><b>待審核</b></td><td>無法使用任何功能</td></tr></tbody></table></div>
       <h3 style="margin-top:18px">新增工作人員</h3><ol style="margin:0;padding-left:20px;font-size:15px"><li>請同仁開啟本後台，點選「申請帳號」</li><li>同仁完成電子郵件驗證</li><li>於本頁指定權限</li></ol>
-      <p class="hint">權限由資料庫強制執行，即使他人取得網頁程式碼也無法越權操作。</p></section></div>`;
+      <p class="hint">姓名可直接在左側表格修改，離開輸入框即自動儲存；報到紀錄的「經手人」會顯示此姓名。權限由資料庫強制執行，即使他人取得網頁程式碼也無法越權操作。</p></section></div>`;
 }
 function accountView() {
   return `<section class="panel" style="max-width:480px"><h2>我的帳號</h2><p>${esc(st.session.user.email)}｜${ROLE_NAME[st.role]}</p>
@@ -583,6 +583,15 @@ document.addEventListener("input", e => {
 document.addEventListener("change", async e => {
   const t = e.target;
   if (t.dataset.cat) { const { error } = await sb.from("registrations").update({ category: t.value }).eq("id", t.dataset.cat); if (error) return toast(errMsg(error)); const r = st.regs.find(x => x.id === t.dataset.cat); if (r) r.category = t.value; return toast("已更新類別"); }
+  if (t.dataset.dname) {
+    const name = t.value.trim().slice(0, 30);
+    const { error } = await sb.from("staff_roles").update({ display_name: name }).eq("user_id", t.dataset.dname);
+    if (error) return toast(errMsg(error));
+    const row = st.staff.find(x => x.user_id === t.dataset.dname); if (row) row.display_name = name;
+    st.names[t.dataset.dname] = name || (row && row.email);
+    if (t.dataset.dname === st.me) { st.myName = name || st.session.user.email; const b = $("[data-act=account]"); if (b) b.textContent = st.myName; }
+    return toast(name ? "已更新姓名" : "已清除姓名");
+  }
   if (t.dataset.role) { const { error } = await sb.from("staff_roles").update({ role: t.value }).eq("user_id", t.dataset.role); if (error) { toast(errMsg(error)); } else toast("已更新權限"); await loadStaff(); return render(); }
   if (t.id === "csvfile" && t.files[0]) { const text = await t.files[0].text(); st.importRows = parseCSV(text); return render(); }
   if (t.dataset.photo != null && t.files?.[0]) { st.C.people[+t.dataset.photo].photo = await resize(t.files[0], 360, .82); markDirty(); return redrawEditor(); }
