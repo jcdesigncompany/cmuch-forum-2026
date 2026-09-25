@@ -127,7 +127,7 @@ section.sec+section.sec{border-top:1px solid var(--line)}
 .pbtn .og{color:var(--muted);font-size:13px;display:block;line-height:1.45}
 .pbtn:hover b{color:var(--blue);text-decoration:underline}
 .tbc{color:var(--muted);font-size:14px}
-.badge-inv{display:inline-block;font-size:11px;font-weight:700;color:#8A4B00;background:#FFE7C7;border-radius:4px;padding:0 5px;margin-left:4px;vertical-align:2px}
+.inv{font-style:normal;font-weight:400;font-size:.9em;color:var(--muted);margin-left:2px;white-space:nowrap}
 .row.is-now .card{box-shadow:0 0 0 2px var(--blue)}
 .row.is-now .dot{background:var(--blue);border-color:var(--blue)}
 .row.is-past{opacity:.6}

@@ -87,7 +87,7 @@ function heroHTML(){
 function personInline(ids,label){
   ids=ids||[];if(!ids.length)return "";
   var vis=ids.map(person).filter(visible),hidden=ids.length-vis.length;
-  var h=vis.map(function(p){return '<button class="pbtn" data-person="'+esc(p.id)+'"><span class="nm"><b>'+esc(p.name)+'</b> '+esc(p.title)+(p.status!=="confirmed"?'<em class="badge-inv">邀請中</em>':'')+'</span><span class="og">'+esc(p.org)+'</span></button>'}).join("");
+  var h=vis.map(function(p){return '<button class="pbtn" data-person="'+esc(p.id)+'"><span class="nm"><b>'+esc(p.name)+'</b> '+esc(p.title)+(p.status!=="confirmed"?'<em class="inv">（邀請中）</em>':'')+'</span><span class="og">'+esc(p.org)+'</span></button>'}).join("");
   if(hidden)h+='<span class="tbc">'+(vis.length?'及其他貴賓（確認中）':label+'確認中')+'</span>';
   return '<div><dt>'+label+'</dt><dd>'+h+'</dd></div>'
 }
@@ -133,7 +133,7 @@ function speakersHTML(){
   var cards=list.map(function(p){
     var roles=[];rolesOf(p.id).forEach(function(r){if(roles.indexOf(r.role)<0)roles.push(r.role)});
     return '<button class="sp" data-person="'+esc(p.id)+'"><div class="ava">'+(p.photo?'<img src="'+p.photo+'" alt="">':esc(initials(p.name)))+'</div>'+
-    '<div><h3>'+esc(p.name)+'<small>'+esc(p.title)+'</small>'+(p.status!=="confirmed"?'<em class="badge-inv">邀請中</em>':'')+'</h3><p class="org">'+esc(p.org)+'</p></div>'+
+    '<div><h3>'+esc(p.name)+'<small>'+esc(p.title)+'</small>'+(p.status!=="confirmed"?'<em class="inv">（邀請中）</em>':'')+'</h3><p class="org">'+esc(p.org)+'</p></div>'+
     (roles.length?'<div class="roles">'+roles.map(function(r){return '<span>'+r+'</span>'}).join("")+'</div>':'')+'</button>'}).join("");
   return '<section class="sec" id="speakers"><div class="wrap"><div class="sec-head"><h2>貴賓與講者<small>Speakers &amp; Moderators</small></h2><p>依議程順序排列，點選卡片查看簡介與場次。</p></div>'+
   (cards?'<div class="grid">'+cards+'</div>':'<div class="empty">講者名單確認中，將陸續公布。</div>')+
@@ -185,7 +185,7 @@ function sheet(id){
   var p=person(id);if(!p||!visible(p))return;
   var rs=rolesOf(id);
   var el=document.createElement("div");el.className="scrim";
-  el.innerHTML='<div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(p.name)+' 簡介"><button class="x" aria-label="關閉">×</button><div class="hd"><div class="ava">'+(p.photo?'<img src="'+p.photo+'" alt="">':esc(initials(p.name)))+'</div><div><h3>'+esc(p.name)+' <small style="font-size:15px;font-weight:500;color:var(--muted)">'+esc(p.title)+'</small>'+(p.status!=="confirmed"?'<em class="badge-inv">邀請中</em>':'')+'</h3><div style="color:var(--muted);font-size:15px">'+esc(p.org)+'</div></div></div>'+
+  el.innerHTML='<div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(p.name)+' 簡介"><button class="x" aria-label="關閉">×</button><div class="hd"><div class="ava">'+(p.photo?'<img src="'+p.photo+'" alt="">':esc(initials(p.name)))+'</div><div><h3>'+esc(p.name)+' <small style="font-size:15px;font-weight:500;color:var(--muted)">'+esc(p.title)+'</small>'+(p.status!=="confirmed"?'<em class="inv">（邀請中）</em>':'')+'</h3><div style="color:var(--muted);font-size:15px">'+esc(p.org)+'</div></div></div>'+
   (p.bio?'<div class="bio">'+esc(p.bio)+'</div>':'<p style="color:var(--muted)">簡介整理中。</p>')+
   (rs.length?'<h4>參與場次</h4><ul>'+rs.map(function(r){return '<li><span class="num">'+esc(r.s.start)+'</span>　'+r.role+'｜'+esc(r.s.title)+'</li>'}).join("")+'</ul>':'')+'</div>';
   function close(){el.remove();document.removeEventListener("keydown",k)}
