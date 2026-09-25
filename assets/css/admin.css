@@ -171,3 +171,6 @@ details.walk summary{cursor:pointer;font-weight:700;padding:4px 0}
 .mealtag.veg{background:#DDF5E4;color:#0B6B36}
 .mealtag.sm{margin:0;padding:1px 8px;font-size:13px}
 @media (prefers-color-scheme:dark){.mealtag.veg{background:#113A2A;color:#7BE0A6}}
+.top .acct.out{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.45);color:#fff;font-weight:700}
+.top .acct.out:hover{background:rgba(255,255,255,.22)}
+.top .acct{cursor:pointer}
