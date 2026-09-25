@@ -1,5 +1,5 @@
 {
- "agendaVersion": 2026092511,
+ "agendaVersion": 2026092512,
  "info": {
   "line1": "健康台灣深耕計畫",
   "line2": "兒童醫院永續發展論壇",
@@ -350,7 +350,7 @@
    "org": "中國醫藥大學兒童醫院",
    "status": "confirmed",
    "bio": "現職：中國醫藥大學兒童醫院副院長、兒童神經科主任；中國醫藥大學附設醫院醫學遺傳科主治醫師；教育部部定教授\n學會：台灣癲癇醫學會理事\n專長：兒童神經學、癲癇、醫學遺傳",
-   "photo": ""
+   "photo": "assets/img/speakers/zhou_yq.jpg"
   },
   {
    "id": "cai_yj",
