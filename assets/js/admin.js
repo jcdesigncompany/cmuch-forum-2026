@@ -1,4 +1,4 @@
-import { sb, configured, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js";
+import { sb, configured, secretKeyError, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js";
 
 const app = $("#app");
 const ROLE_NAME = { admin: "管理者", checkin: "報到人員", viewer: "檢視者", pending: "待審核", none: "未授權" };
@@ -568,7 +568,8 @@ async function boot() {
   }
   render();
 }
-if (!configured) app.innerHTML = '<div class="gate"><h2>尚未完成系統設定</h2><p>請在 assets/js/config.js 填入 Supabase 專案網址與 anon key，詳見 README.md。</p></div>';
+if (secretKeyError) app.innerHTML = '<div class="gate"><h2>金鑰設定錯誤，已停止運作</h2><p>assets/js/config.js 填入的是 service_role 或 secret key，這把金鑰可以繞過所有權限。請立即改填 anon 或 publishable key，並到 Supabase 重新產生 secret key。</p></div>';
+else if (!configured) app.innerHTML = '<div class="gate"><h2>尚未完成系統設定</h2><p>請在 assets/js/config.js 填入 Supabase 專案網址與 anon key，詳見 README.md。</p></div>';
 else {
   sb.auth.onAuthStateChange((ev, session) => {
     if (ev === "PASSWORD_RECOVERY") { st.recovery = true; st.authMsg = null; renderAuth(); }

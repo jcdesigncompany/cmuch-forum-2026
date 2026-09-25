@@ -57,10 +57,10 @@ function setupConnection() {
   };
   try {
     const url = ask('Supabase 專案網址', '例：https://abcdefgh.supabase.co\n（Supabase → Project Settings → API → Project URL）', props.getProperty('SUPABASE_URL'));
-    const key = ask('Supabase anon public key', '（Supabase → Project Settings → API → anon public）\n請勿貼上 service_role key。', props.getProperty('SUPABASE_ANON_KEY'));
+    const key = ask('Supabase 公開金鑰', '請貼上 anon public key（eyJ 開頭）或 publishable key（sb_publishable_ 開頭）。\n（Supabase → Project Settings → API Keys）\n請勿貼上 service_role 或 secret key。', props.getProperty('SUPABASE_ANON_KEY'));
     const secret = ask('同步金鑰', '請至論壇管理後台 →「報名概況」→「產生同步金鑰」取得，以 sync_ 開頭。', props.getProperty('SYNC_SECRET'));
     if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(url)) return ui.alert('專案網址格式不正確，應為 https://xxxx.supabase.co');
-    if (/service_role/i.test(key) || isServiceRoleKey(key)) return ui.alert('偵測到 service_role key，基於安全考量不予儲存。請改貼 anon public key。');
+    if (/service_role|^sb_secret_/i.test(key) || isServiceRoleKey(key)) return ui.alert('偵測到 service_role 或 secret key，基於安全考量不予儲存。請改貼 anon public key 或 publishable key。');
     if (!/^sync_[0-9a-f]{48}$/.test(secret)) return ui.alert('同步金鑰格式不正確，請重新從管理後台複製。');
     props.setProperties({ SUPABASE_URL: url.replace(/\/$/, ''), SUPABASE_ANON_KEY: key, SYNC_SECRET: secret });
     const rows = fetchRegistrations();
@@ -207,7 +207,7 @@ function rpc(fn, body) {
   const url = prop('SUPABASE_URL'), key = prop('SUPABASE_ANON_KEY');
   const res = UrlFetchApp.fetch(url + '/rest/v1/rpc/' + fn, {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    headers: { apikey: key, Authorization: 'Bearer ' + key },
+    headers: /^eyJ/.test(key) ? { apikey: key, Authorization: 'Bearer ' + key } : { apikey: key },
     payload: JSON.stringify(body),
   });
   const code = res.getResponseCode(), text = res.getContentText();

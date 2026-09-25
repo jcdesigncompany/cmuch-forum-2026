@@ -1,7 +1,13 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/+esm";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
-export const configured = !/YOUR-/.test(SUPABASE_URL + SUPABASE_ANON_KEY);
+function isSecretKey(k) {
+  if (/^sb_secret_/.test(k)) return true;
+  try { return JSON.parse(atob(k.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).role === "service_role"; } catch { return false; }
+}
+export const secretKeyError = isSecretKey(SUPABASE_ANON_KEY);
+if (secretKeyError) console.error("config.js 填入的是 service_role／secret key，請立即改為 anon 或 publishable key，並到 Supabase 重新產生 secret key。");
+export const configured = !/YOUR-/.test(SUPABASE_URL + SUPABASE_ANON_KEY) && !secretKeyError;
 export const sb = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 export function esc(s) {
