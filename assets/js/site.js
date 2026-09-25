@@ -7,6 +7,7 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){retur
 var S=null;
 var KV="assets/img/kv.jpg";
 var LOGO="assets/img/logo.png";
+var LOGO_FULL="assets/img/logo-full.png";
 var A={can:false,preview:false};
 var UI={track:"all",q:"",mode:0,step:0};
 var TRACKS={opening:"開幕",policy:"國家政策與藍圖",practice:"兒童醫院深耕實踐",panel:"綜合座談",logistics:"報到與休息"};
@@ -73,7 +74,7 @@ function heroHTML(){
   var I=S.info;
   return '<section class="hero" id="home"><div class="kv" style="background-image:url('+KV+')" role="img" aria-label="論壇主視覺：兒童與智慧醫療儀表板"></div>'+streams()+
   '<div class="wrap"><div class="hero-inner">'+
-  '<div class="org"><img src="'+LOGO+'" alt="中國醫藥大學兒童醫院標誌"><span>'+esc(I.organizer)+'</span></div>'+
+  '<div class="org"><span class="plate"><img src="'+LOGO_FULL+'" alt="'+esc(I.organizer)+'" width="1400" height="182"></span></div>'+
   '<h1><span>'+esc(I.line1)+'</span><span>'+esc(I.line2)+'</span></h1>'+
   '<p class="sub">'+esc(I.subtitle)+'</p><p class="en">'+esc(I.subtitleEn)+'</p>'+
   '<dl class="facts"><div><dt>日期</dt><dd class="num">'+esc(dateZh())+'</dd></div><div><dt>時間</dt><dd class="num">'+esc(I.start)+'–'+esc(I.end)+'<small>'+esc(I.checkin)+' 開放報到</small></dd></div><div><dt>地點</dt><dd>'+esc(I.venue)+'<small>'+esc(I.address)+'</small></dd></div></dl>'+
@@ -162,7 +163,7 @@ function pageHTML(){
   return '<header class="topbar"><div class="wrap"><a class="brand" href="#home"><img src="'+LOGO+'" alt=""><span>'+esc(I.line2)+'</span></a><nav class="topnav" aria-label="主要導覽">'+NAV.slice(1).map(function(n){return '<a href="#'+n[0]+'">'+n[1]+'</a>'}).join("")+'<a href="#info">聯絡</a>'+(regOpen()?'<a href="register.html" class="reg">報名</a>':'<a href="ticket.html">報到證</a>')+'</nav></div></header>'+
   (I.noticeOn&&I.notice?'<div class="notice" role="status"><div class="wrap">'+IC.bell+'<span>'+esc(I.notice)+'</span></div></div>':'')+
   '<main>'+heroHTML()+agendaHTML()+speakersHTML()+travelHTML()+wayHTML()+infoHTML()+'</main>'+
-  '<footer><div class="wrap"><div style="display:flex;gap:12px;align-items:center"><img src="'+LOGO+'" alt=""><div>'+esc(I.line1+I.line2)+'<br>'+esc(I.funding)+'</div></div><div class="num">'+esc(dateZh())+'　'+esc(I.venue)+'</div><a class="staff" href="admin.html" rel="nofollow">工作人員登入</a></div></footer>'+
+  '<footer><div class="wrap"><div class="fbrand"><span class="plate sm"><img src="'+LOGO_FULL+'" alt="'+esc(I.organizer)+'" width="1400" height="182"></span><div>'+esc(I.line1+I.line2)+'<br>'+esc(I.funding)+'</div></div><div class="num">'+esc(dateZh())+'　'+esc(I.venue)+'</div><a class="staff" href="admin.html" rel="nofollow">工作人員登入</a></div></footer>'+
   '<nav class="bnav" aria-label="快速導覽"><div class="in">'+NAV.map(function(n){return '<a href="#'+n[0]+'" data-nav="'+n[0]+'">'+n[2]+'<span>'+n[1]+'</span></a>'}).join("")+'</div></nav>'
 }
 
