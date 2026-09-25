@@ -148,7 +148,7 @@ function travelHTML(){
   '<div class="addr"><div><h3>'+esc(S.info.venue)+'</h3><p>'+esc(S.info.address)+'</p></div><div class="acts">'+
   '<a class="btn btn-blue" href="'+esc(mapsUrl())+'" target="_blank" rel="noopener">Google 地圖</a><a class="btn btn-line" href="'+esc(appleUrl())+'" target="_blank" rel="noopener">Apple 地圖</a><button class="btn btn-line" data-copy="'+esc(S.info.address)+'">複製地址</button></div></div>'+
   '<div class="tabs" role="tablist">'+modes.map(function(x,i){return '<button role="tab" aria-selected="'+(i===UI.mode)+'" data-mode="'+i+'">'+esc(x.name)+'</button>'}).join("")+'</div>'+
-  (m?'<ol class="steps" role="tabpanel">'+(m.lines||[]).filter(Boolean).map(function(l){return '<li><span>'+esc(l)+'</span></li>'}).join("")+'</ol>':'')+
+  (m?'<ol class="steps" role="tabpanel">'+(m.lines||[]).filter(Boolean).map(function(l){var i=l.indexOf("：");return '<li><span>'+(i>0&&i<40?'<b>'+esc(l.slice(0,i))+'</b>：'+esc(l.slice(i+1)):esc(l))+'</span></li>'}).join("")+'</ol>':'')+
   (S.info.travelNote?'<p class="fine">'+esc(S.info.travelNote)+'</p>':'')+'</div></section>'
 }
 function wayHTML(){
