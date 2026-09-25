@@ -79,7 +79,7 @@ function heroHTML(){
   '<dl class="facts"><div><dt>日期</dt><dd class="num">'+esc(dateZh())+'</dd></div><div><dt>時間</dt><dd class="num">'+esc(I.start)+'–'+esc(I.end)+'<small>'+esc(I.checkin)+' 開放報到</small></dd></div><div><dt>地點</dt><dd>'+esc(I.venue)+'<small>'+esc(I.address)+'</small></dd></div></dl>'+
   '<div id="live">'+liveHTML()+'</div>'+
   '<div class="cta">'+(regOpen()?'<a class="btn btn-pri" href="register.html">立即報名</a><a class="btn btn-ghost" href="#agenda">查看議程</a>':'<a class="btn btn-pri" href="#agenda">查看議程</a>')+'<a class="btn btn-ghost" href="'+esc(mapsUrl())+'" target="_blank" rel="noopener">導航到會場</a>'+
-  (regOpen()?'<a class="btn btn-ghost" href="register.html">線上報名</a>':'')+'<a class="btn btn-ghost" href="'+esc(calUrl())+'" target="_blank" rel="noopener">加入行事曆</a>'+
+  '<a class="btn btn-ghost" href="'+esc(calUrl())+'" target="_blank" rel="noopener">加入行事曆</a>'+
   '</div></div></div></section>'
 }
 function personInline(ids,label){
@@ -162,7 +162,7 @@ function pageHTML(){
   return '<header class="topbar"><div class="wrap"><a class="brand" href="#home"><img src="'+LOGO+'" alt=""><span>'+esc(I.line2)+'</span></a><nav class="topnav" aria-label="主要導覽">'+NAV.slice(1).map(function(n){return '<a href="#'+n[0]+'">'+n[1]+'</a>'}).join("")+'<a href="#info">聯絡</a>'+(regOpen()?'<a href="register.html" class="reg">報名</a>':'<a href="ticket.html">報到證</a>')+'</nav></div></header>'+
   (I.noticeOn&&I.notice?'<div class="notice" role="status"><div class="wrap">'+IC.bell+'<span>'+esc(I.notice)+'</span></div></div>':'')+
   '<main>'+heroHTML()+agendaHTML()+speakersHTML()+travelHTML()+wayHTML()+infoHTML()+'</main>'+
-  '<footer><div class="wrap"><div style="display:flex;gap:12px;align-items:center"><img src="'+LOGO+'" alt=""><div>'+esc(I.line1+I.line2)+'<br>'+esc(I.funding)+'</div></div><div class="num">'+esc(dateZh())+'　'+esc(I.venue)+'</div></div></footer>'+
+  '<footer><div class="wrap"><div style="display:flex;gap:12px;align-items:center"><img src="'+LOGO+'" alt=""><div>'+esc(I.line1+I.line2)+'<br>'+esc(I.funding)+'</div></div><div class="num">'+esc(dateZh())+'　'+esc(I.venue)+'</div><a class="staff" href="admin.html" rel="nofollow">工作人員登入</a></div></footer>'+
   '<nav class="bnav" aria-label="快速導覽"><div class="in">'+NAV.map(function(n){return '<a href="#'+n[0]+'" data-nav="'+n[0]+'">'+n[2]+'<span>'+n[1]+'</span></a>'}).join("")+'</div></nav>'
 }
 
