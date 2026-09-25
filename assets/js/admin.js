@@ -534,7 +534,7 @@ document.addEventListener("click", async e => {
     if (!confirm("將以網站檔案中的最新議程與貴賓名單取代目前資料（已上傳的照片會保留）。確定套用？")) return;
     const r = await fetch("data/event.json", { cache: "no-cache" }); const F = await r.json();
     const photos = {}; (st.C.people || []).forEach(p => { if (p.photo) photos[p.id] = p.photo; });
-    st.C.sessions = F.sessions;
+    st.C.sessions = F.sessions; st.C.agendaVersion = F.agendaVersion;
     st.C.people = F.people.map(p => Object.assign({}, p, { photo: p.photo || photos[p.id] || "" }));
     st.C.info = Object.assign({}, st.C.info, { showInvited: !!F.info.showInvited });
     st.cDirty = true; render(); toast("已套用最新議程與貴賓名單，確認後請按「儲存並發布」");

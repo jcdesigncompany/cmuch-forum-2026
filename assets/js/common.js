@@ -41,6 +41,20 @@ export function toast(msg) {
   document.body.appendChild(t); setTimeout(() => t.remove(), 2800);
 }
 
+/** 網站檔案的議程與貴賓名單較資料庫新（agendaVersion 較大）時，以檔案為準 */
+async function withFileAgenda(S) {
+  try {
+    const F = await (await fetch("data/event.json", { cache: "no-cache" })).json();
+    if ((F.agendaVersion || 0) <= (S.agendaVersion || 0)) return S;
+    const photos = {}; (S.people || []).forEach(p => { if (p.photo) photos[p.id] = p.photo; });
+    return Object.assign({}, S, {
+      agendaVersion: F.agendaVersion, sessions: F.sessions,
+      people: F.people.map(p => Object.assign({}, p, { photo: p.photo || photos[p.id] || "" })),
+      info: Object.assign({}, S.info, { showInvited: !!F.info.showInvited })
+    });
+  } catch { return S; }
+}
+
 /** 讀取網站內容：優先讀資料庫，失敗時使用 data/event.json */
 export async function loadContent(opts) {
   if (sb) {
@@ -52,7 +66,7 @@ export async function loadContent(opts) {
       } else {
         // 對外頁面：邀請中貴賓的個人資料已在資料庫端移除
         const { data, error } = await sb.rpc("public_site_content");
-        if (!error && data) return { S: data, source: "db" };
+        if (!error && data) return { S: await withFileAgenda(data), source: "db" };
       }
     } catch { /* fall through */ }
   }
