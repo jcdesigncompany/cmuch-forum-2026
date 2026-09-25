@@ -307,3 +307,4 @@ button.pm:hover b{color:var(--blue)}
 .pm.tbd b{color:var(--muted);font-weight:500}
 @media (max-width:760px){.pair{grid-template-columns:1fr;padding:14px}.pm .ava{width:56px;height:56px}}
 @media (max-width:420px){.pp{grid-template-columns:1fr}}
+.sheet .bio .bh{display:block;margin:4px 0 2px;font-size:13px;letter-spacing:.08em;color:var(--blue)}
