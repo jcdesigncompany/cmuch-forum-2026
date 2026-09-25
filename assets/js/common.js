@@ -41,14 +41,14 @@ export function toast(msg) {
   document.body.appendChild(t); setTimeout(() => t.remove(), 2800);
 }
 
-/** 網站檔案的議程與貴賓名單較資料庫新（agendaVersion 較大）時，以檔案為準 */
+/** 網站檔案的議程、貴賓名單與交通資訊較資料庫新（agendaVersion 較大）時，以檔案為準 */
 async function withFileAgenda(S) {
   try {
     const F = await (await fetch("data/event.json", { cache: "no-cache" })).json();
     if ((F.agendaVersion || 0) <= (S.agendaVersion || 0)) return S;
     const photos = {}; (S.people || []).forEach(p => { if (p.photo) photos[p.id] = p.photo; });
     return Object.assign({}, S, {
-      agendaVersion: F.agendaVersion, sessions: F.sessions,
+      agendaVersion: F.agendaVersion, sessions: F.sessions, travel: F.travel,
       people: F.people.map(p => Object.assign({}, p, { photo: p.photo || photos[p.id] || "" })),
       info: Object.assign({}, S.info, { showInvited: !!F.info.showInvited })
     });
