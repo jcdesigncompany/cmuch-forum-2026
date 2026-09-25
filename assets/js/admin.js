@@ -303,7 +303,7 @@ const sortedSessions = () => st.C.sessions.slice().sort((a, b) => toMin(a.start)
 function contentView() {
   if (!st.C) return `<div class="panel"><h2>尚未建立網站內容</h2><p>資料庫中還沒有網站內容。請先載入預設內容（來自 data/event.json），確認後儲存。</p><button class="btn pri" data-act="seed">載入預設內容</button></div>`;
   const secs = [["info", "基本資訊"], ["reg", "報名設定"], ["agenda", "議程"], ["people", "貴賓"], ["travel", "交通"], ["way", "會場導引"], ["check", "發布前檢核"]];
-  return `<div class="editor"><div class="side" role="tablist">${secs.map(s => `<button data-sec="${s[0]}" aria-current="${st.cSec === s[0]}">${s[1]}</button>`).join("")}</div><div>${secBody()}
+  return `<div class="editor"><div class="side" role="tablist">${secs.map(s => `<button data-sec="${s[0]}" aria-current="${st.cSec === s[0]}">${s[1]}</button>`).join("")}</div><div>${st.cSec === "agenda" || st.cSec === "people" ? `<div class="note" style="margin-bottom:14px">網站檔案中的議程與貴賓名單已更新時，可按此套用到資料庫（會取代目前的議程與貴賓資料，已上傳的照片會保留）。<div class="tools" style="margin:10px 0 0"><button class="btn sm" data-act="syncagenda">套用最新議程與貴賓名單</button></div></div>` : ""}${secBody()}
   <div class="savebar"><span class="${st.cDirty ? "dirty" : ""}">${st.cDirty ? "有尚未儲存的修改" : "最近儲存：" + esc(st.cUpdated ? tpStamp(st.cUpdated) : "—")}</span><a class="btn sm" href="index.html" target="_blank" rel="noopener">檢視網站</a><button class="btn pri" data-act="savecontent"${st.cDirty ? "" : " disabled"}>儲存並發布</button></div></div></div>`;
 }
 function secBody() {
@@ -530,6 +530,15 @@ document.addEventListener("click", async e => {
   else if (a === "clearall") { if (prompt("將刪除全部報名資料（含線上報名者），無法復原。請輸入「確認刪除」繼續") !== "確認刪除") return;
     const r = await sb.from("registrations").delete().not("id", "is", null); if (r.error) toast(errMsg(r.error)); else toast("已刪除全部報名資料"); await loadRegs(); render(); }
   else if (a === "seed") { const r = await fetch("data/event.json", { cache: "no-cache" }); st.C = await r.json(); st.cDirty = true; render(); toast("已載入預設內容，確認後請按「儲存並發布」"); }
+  else if (a === "syncagenda") {
+    if (!confirm("將以網站檔案中的最新議程與貴賓名單取代目前資料（已上傳的照片會保留）。確定套用？")) return;
+    const r = await fetch("data/event.json", { cache: "no-cache" }); const F = await r.json();
+    const photos = {}; (st.C.people || []).forEach(p => { if (p.photo) photos[p.id] = p.photo; });
+    st.C.sessions = F.sessions;
+    st.C.people = F.people.map(p => Object.assign({}, p, { photo: p.photo || photos[p.id] || "" }));
+    st.C.info = Object.assign({}, st.C.info, { showInvited: !!F.info.showInvited });
+    st.cDirty = true; render(); toast("已套用最新議程與貴賓名單，確認後請按「儲存並發布」");
+  }
   else if (a === "savecontent") saveContent();
   else if (a === "togglereg") {
     if (st.cDirty) return toast("「網站內容」有尚未儲存的修改，請先儲存後再切換報名狀態");
