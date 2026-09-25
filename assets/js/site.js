@@ -77,6 +77,7 @@ function heroHTML(){
   '<div class="org"><span class="plate"><img src="'+LOGO_FULL+'" alt="'+esc(I.organizer)+'" width="1400" height="182"></span></div>'+
   '<h1><span>'+esc(I.line1)+'</span><span>'+esc(I.line2)+'</span></h1>'+
   '<p class="sub">'+esc(I.subtitle)+'</p><p class="en">'+esc(I.subtitleEn)+'</p>'+
+  (I.purpose?'<p class="lead">'+esc(I.purpose)+'</p>':'')+
   '<dl class="facts"><div><dt>日期</dt><dd class="num">'+esc(dateZh())+'</dd></div><div><dt>時間</dt><dd class="num">'+esc(I.start)+'–'+esc(I.end)+'<small>'+esc(I.checkin)+' 開放報到</small></dd></div><div><dt>地點</dt><dd>'+esc(I.venue)+'<small>'+esc(I.address)+'</small></dd></div></dl>'+
   '<div id="live">'+liveHTML()+'</div>'+
   '<div class="cta">'+(regOpen()?'<a class="btn btn-pri" href="register.html">立即報名</a><a class="btn btn-ghost" href="#agenda">查看議程</a>':'<a class="btn btn-pri" href="#agenda">查看議程</a>')+'<a class="btn btn-ghost" href="'+esc(mapsUrl())+'" target="_blank" rel="noopener">導航到會場</a>'+
@@ -152,8 +153,8 @@ function wayHTML(){
 }
 function infoHTML(){
   var I=S.info,c=[I.contactName,I.contactPhone,I.contactEmail].filter(Boolean);
-  return '<section class="sec" id="info"><div class="wrap"><div class="sec-head"><h2>論壇宗旨與聯絡資訊<small>About</small></h2></div><p class="purpose">'+esc(I.purpose)+'</p>'+
-  '<dl class="info-grid" style="margin-top:28px"><div><dt>主辦單位</dt><dd>'+esc(I.organizer)+'</dd></div><div><dt>經費來源</dt><dd>'+esc(I.funding)+'</dd></div>'+
+  return '<section class="sec" id="info"><div class="wrap"><div class="sec-head"><h2>主辦與聯絡資訊<small>Contact</small></h2></div>'+
+  '<dl class="info-grid"><div><dt>主辦單位</dt><dd>'+esc(I.organizer)+'</dd></div><div><dt>經費來源</dt><dd>'+esc(I.funding)+'</dd></div>'+
   (c.length?'<div><dt>聯絡窗口</dt><dd>'+(I.contactName?esc(I.contactName)+'<br>':'')+(I.contactPhone?'<a href="tel:'+esc(I.contactPhone.replace(/[^\d+#,]/g,""))+'">'+esc(I.contactPhone)+'</a><br>':'')+(I.contactEmail?'<a href="mailto:'+esc(I.contactEmail)+'">'+esc(I.contactEmail)+'</a>':'')+'</dd></div>':'')+
   '</dl><p class="hint" style="margin-top:26px">已報名者可至 <a href="ticket.html">查詢報到證</a> 取得個人 QR code。</p></div></section>'
 }
