@@ -284,3 +284,26 @@ footer .plate img{width:auto;height:30px}
 .staff-top{display:inline-grid;place-items:center;width:30px;height:30px;margin-left:-6px;border-radius:8px;color:rgba(255,255,255,.35);flex:none;text-decoration:none}
 .staff-top:hover,.staff-top:focus-visible{color:#fff;background:rgba(255,255,255,.1)}
 @media (min-width:1220px){.staff-top{position:absolute;left:14px;top:15px;margin:0}}
+
+/* 貴賓與講者：依場次並列 */
+.pairs{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--tc);border-radius:14px;padding:16px 20px}
+.pair .ph{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.pair .ph .num{font-family:var(--latin);font-weight:600;font-size:14px}
+.pair .ph .tag{font-size:12px;font-weight:700;color:var(--tc)}
+.pair .ph h3{flex-basis:100%;margin:2px 0 0;font-size:16px;line-height:1.5}
+.pp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pp.panel{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.pair.t-panel{grid-template-columns:1fr}
+.pm{display:flex;gap:12px;align-items:center;text-align:left;background:none;border:0;padding:6px;border-radius:12px;color:var(--ink);min-width:0}
+button.pm:hover{background:var(--sky)}
+button.pm:hover b{color:var(--blue)}
+.pm .ava{width:64px;height:64px;font-size:22px}
+.pm>div:last-child{min-width:0;line-height:1.4}
+.pm .rl{display:block;font-size:12px;color:var(--muted)}
+.pm b{font-size:17px}
+.pm small{font-size:13px;color:var(--muted);margin-left:5px}
+.pm .og{display:block;font-size:13px;color:var(--muted)}
+.pm.tbd b{color:var(--muted);font-weight:500}
+@media (max-width:760px){.pair{grid-template-columns:1fr;padding:14px}.pm .ava{width:56px;height:56px}}
+@media (max-width:420px){.pp{grid-template-columns:1fr}}

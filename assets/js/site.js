@@ -126,18 +126,21 @@ function agendaHTML(){
   '<div id="rows">'+agendaRows()+'</div></div></section>'
 }
 function speakersHTML(){
-  var order=[];sorted().forEach(function(s){(s.speakers||[]).concat(s.moderators||[]).forEach(function(id){if(order.indexOf(id)<0)order.push(id)})});
-  S.people.forEach(function(p){if(order.indexOf(p.id)<0)order.push(p.id)});
-  var list=order.map(person).filter(function(p){return p&&visible(p)});
-  var hidden=S.people.filter(function(p){return !visible(p)}).length;
-  var cards=list.map(function(p){
-    var roles=[];rolesOf(p.id).forEach(function(r){if(roles.indexOf(r.role)<0)roles.push(r.role)});
-    return '<button class="sp" data-person="'+esc(p.id)+'"><div class="ava">'+(p.photo?'<img src="'+p.photo+'" alt="">':esc(initials(p.name)))+'</div>'+
-    '<div><h3>'+esc(p.name)+'<small>'+esc(p.title)+'</small>'+(p.status!=="confirmed"?'<em class="inv">（邀請中）</em>':'')+'</h3><p class="org">'+esc(p.org)+'</p></div>'+
-    (roles.length?'<div class="roles">'+roles.map(function(r){return '<span>'+r+'</span>'}).join("")+'</div>':'')+'</button>'}).join("");
-  return '<section class="sec" id="speakers"><div class="wrap"><div class="sec-head"><h2>貴賓與講者<small>Speakers &amp; Moderators</small></h2><p>依議程順序排列，點選卡片查看簡介與場次。</p></div>'+
-  (cards?'<div class="grid">'+cards+'</div>':'<div class="empty">講者名單確認中，將陸續公布。</div>')+
-  (hidden&&cards?'<p class="more-note">更多貴賓與講者確認中，將陸續公布。</p>':'')+'</div></section>'
+  function mini(id,role){
+    var p=person(id);if(!p||!visible(p))return '<div class="pm tbd"><div class="ava">?</div><div><span class="rl">'+role+'</span><b>確認中</b></div></div>';
+    return '<button class="pm" data-person="'+esc(p.id)+'"><div class="ava">'+(p.photo?'<img src="'+p.photo+'" alt="">':esc(initials(p.name)))+'</div>'+
+    '<div><span class="rl">'+role+'</span><b>'+esc(p.name)+'</b><small>'+esc(p.title)+(p.status!=="confirmed"?'<em class="inv">（邀請中）</em>':'')+'</small><span class="og">'+esc(p.org)+'</span></div></button>'
+  }
+  var rows=sorted().filter(function(s){return (s.track==="policy"||s.track==="practice")&&((s.speakers||[]).length||(s.moderators||[]).length)}).map(function(s){
+    var T=splitTitle(s.title);
+    return '<li class="pair t-'+s.track+'"><div class="ph"><span class="num">'+esc(s.start)+'–'+esc(s.end)+'</span><span class="tag">'+esc(TRACKS[s.track])+'</span><h3>'+esc(T.main)+'</h3></div>'+
+    '<div class="pp">'+(s.speakers||[]).map(function(id){return mini(id,"講者")}).join("")+(s.moderators||[]).map(function(id){return mini(id,"座長")}).join("")+'</div></li>'}).join("");
+  var panel=sorted().filter(function(s){return s.track==="panel"&&(s.speakers||[]).length})[0],ph="";
+  if(panel){var T=splitTitle(panel.title);
+    ph='<li class="pair t-panel"><div class="ph"><span class="num">'+esc(panel.start)+'–'+esc(panel.end)+'</span><span class="tag">'+esc(T.lab||TRACKS.panel)+'</span><h3>'+esc(T.main)+'</h3></div>'+
+    '<div class="pp panel">'+panel.speakers.map(function(id){return mini(id,"與談人")}).join("")+(panel.moderators||[]).map(function(id){return mini(id,"主持人")}).join("")+'</div></li>'}
+  return '<section class="sec" id="speakers"><div class="wrap"><div class="sec-head"><h2>貴賓與講者<small>Speakers &amp; Moderators</small></h2><p>依場次列出講者與座長，點選姓名查看簡介。</p></div>'+
+  (rows||ph?'<ol class="pairs">'+rows+ph+'</ol>':'<div class="empty">講者名單確認中，將陸續公布。</div>')+'</div></section>'
 }
 function travelHTML(){
   var modes=S.travel||[];if(UI.mode>=modes.length)UI.mode=0;var m=modes[UI.mode];
