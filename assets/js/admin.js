@@ -311,7 +311,7 @@ function secBody() {
   if (s === "info") {
     h = fld("主標題第一行", "info.line1") + fld("主標題第二行", "info.line2") + fld("中文副標", "info.subtitle", "textarea") + fld("英文副標", "info.subtitleEn", "textarea") +
       `<div class="three">${fld("日期", "info.date", "date")}${fld("開始", "info.start", "time")}${fld("結束", "info.end", "time")}</div><p class="hint">星期依日期自動計算：${esc(dateZh(C))}</p>` +
-      fld("報到時間", "info.checkin", "time") + fld("地點名稱", "info.venue") + fld("地址", "info.address") + fld("地圖搜尋關鍵字", "info.mapQuery") + fld("論壇宗旨", "info.purpose", "textarea") +
+      fld("報到時間", "info.checkin", "time") + fld("地點名稱", "info.venue") + fld("地址", "info.address") + fld("地圖搜尋關鍵字", "info.mapQuery") + fld("論壇簡介", "info.purpose", "textarea") +
       fld("主辦單位", "info.organizer") + fld("經費來源說明", "info.funding") + `<div class="two">${fld("聯絡窗口", "info.contactName")}${fld("電話", "info.contactPhone", "tel")}</div>` + fld("電子郵件", "info.contactEmail", "email") +
       `<h3 style="margin-top:22px">即時公告</h3>` + chk("顯示頁首公告列", "info.noticeOn") + fld("公告內容", "info.notice", "textarea") +
       `<h3 style="margin-top:22px">貴賓名單公開設定</h3>` + chk("對外顯示「邀請中」貴賓姓名（未勾選時僅顯示已確認者）", "info.showInvited");
