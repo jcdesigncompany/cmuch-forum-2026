@@ -77,6 +77,7 @@ function heroHTML(){
   '<div class="org"><span class="plate"><img src="'+LOGO_FULL+'" alt="'+esc(I.organizer)+'" width="1400" height="182"></span></div>'+
   '<h1><span>'+esc(I.line1)+'</span><span>'+esc(I.line2)+'</span></h1>'+
   '<p class="sub">'+esc(I.subtitle)+'</p><p class="en">'+esc(I.subtitleEn)+'</p>'+
+  (I.purpose?'<p class="lead">'+esc(I.purpose)+'</p>':'')+
   '<dl class="facts"><div><dt>日期</dt><dd class="num">'+esc(dateZh())+'</dd></div><div><dt>時間</dt><dd class="num">'+esc(I.start)+'–'+esc(I.end)+'<small>'+esc(I.checkin)+' 開放報到</small></dd></div><div><dt>地點</dt><dd>'+esc(I.venue)+'<small>'+esc(I.address)+'</small></dd></div></dl>'+
   '<div id="live">'+liveHTML()+'</div>'+
   '<div class="cta">'+(regOpen()?'<a class="btn btn-pri" href="register.html">立即報名</a><a class="btn btn-ghost" href="#agenda">查看議程</a>':'<a class="btn btn-pri" href="#agenda">查看議程</a>')+'<a class="btn btn-ghost" href="'+esc(mapsUrl())+'" target="_blank" rel="noopener">導航到會場</a>'+
@@ -150,10 +151,6 @@ function wayHTML(){
   (S.way.plan?'<div class="plan"><img src="'+S.way.plan+'" alt="會場平面圖"></div>':'')+
   '<div class="facil">'+(S.way.facilities||[]).map(function(f){return '<div><b>'+esc(f.n)+'</b><span>'+esc(f.l)+'</span></div>'}).join("")+'</div></div></div></div></section>'
 }
-function introHTML(){
-  var I=S.info;if(!I.purpose)return "";
-  return '<section class="sec" id="about"><div class="wrap"><div class="sec-head"><h2>論壇簡介<small>About the Forum</small></h2></div><p class="purpose">'+esc(I.purpose)+'</p></div></section>'
-}
 function infoHTML(){
   var I=S.info,c=[I.contactName,I.contactPhone,I.contactEmail].filter(Boolean);
   return '<section class="sec" id="info"><div class="wrap"><div class="sec-head"><h2>主辦與聯絡資訊<small>Contact</small></h2></div>'+
@@ -164,9 +161,9 @@ function infoHTML(){
 var NAV=[["home","首頁",IC.home],["agenda","議程",IC.cal],["speakers","貴賓",IC.ppl],["travel","交通",IC.bus],["way","導引",IC.pin]];
 function pageHTML(){
   var I=S.info;
-  return '<header class="topbar"><div class="wrap"><a class="staff-top" href="admin.html" rel="nofollow" title="工作人員登入" aria-label="工作人員登入"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></a><a class="brand" href="#home"><img src="'+LOGO+'" alt=""><span>'+esc(I.line2)+'</span></a><nav class="topnav" aria-label="主要導覽"><a href="#about">簡介</a>'+NAV.slice(1).map(function(n){return '<a href="#'+n[0]+'">'+n[1]+'</a>'}).join("")+'<a href="#info">聯絡</a>'+(regOpen()?'<a href="register.html" class="reg">報名</a>':'<a href="ticket.html">報到證</a>')+'</nav></div></header>'+
+  return '<header class="topbar"><div class="wrap"><a class="staff-top" href="admin.html" rel="nofollow" title="工作人員登入" aria-label="工作人員登入"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></a><a class="brand" href="#home"><img src="'+LOGO+'" alt=""><span>'+esc(I.line2)+'</span></a><nav class="topnav" aria-label="主要導覽">'+NAV.slice(1).map(function(n){return '<a href="#'+n[0]+'">'+n[1]+'</a>'}).join("")+'<a href="#info">聯絡</a>'+(regOpen()?'<a href="register.html" class="reg">報名</a>':'<a href="ticket.html">報到證</a>')+'</nav></div></header>'+
   (I.noticeOn&&I.notice?'<div class="notice" role="status"><div class="wrap">'+IC.bell+'<span>'+esc(I.notice)+'</span></div></div>':'')+
-  '<main>'+heroHTML()+introHTML()+agendaHTML()+speakersHTML()+travelHTML()+wayHTML()+infoHTML()+'</main>'+
+  '<main>'+heroHTML()+agendaHTML()+speakersHTML()+travelHTML()+wayHTML()+infoHTML()+'</main>'+
   '<footer><div class="wrap"><div class="fbrand"><span class="plate sm"><img src="'+LOGO_FULL+'" alt="'+esc(I.organizer)+'" width="1400" height="182"></span><div>'+esc(I.line1+I.line2)+'<br>'+esc(I.funding)+'</div></div><div class="num">'+esc(dateZh())+'　'+esc(I.venue)+'</div><a class="staff" href="admin.html" rel="nofollow">工作人員登入</a></div></footer>'+
   '<nav class="bnav" aria-label="快速導覽"><div class="in">'+NAV.map(function(n){return '<a href="#'+n[0]+'" data-nav="'+n[0]+'">'+n[2]+'<span>'+n[1]+'</span></a>'}).join("")+'</div></nav>'
 }
