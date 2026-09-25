@@ -189,7 +189,7 @@ function sheet(id){
   var rs=rolesOf(id);
   var el=document.createElement("div");el.className="scrim";
   el.innerHTML='<div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(p.name)+' 簡介"><button class="x" aria-label="關閉">×</button><div class="hd"><div class="ava">'+(p.photo?'<img src="'+p.photo+'" alt="">':esc(initials(p.name)))+'</div><div><h3>'+esc(p.name)+' <small style="font-size:15px;font-weight:500;color:var(--muted)">'+esc(p.title)+'</small>'+(p.status!=="confirmed"?'<em class="inv">（邀請中）</em>':'')+'</h3><div style="color:var(--muted);font-size:15px">'+esc(p.org)+'</div></div></div>'+
-  (p.bio?'<div class="bio">'+esc(p.bio)+'</div>':'<p style="color:var(--muted)">簡介整理中。</p>')+
+  (p.bio?'<div class="bio">'+esc(p.bio).replace(/【([^】]+)】\n?/g,'<b class="bh">$1</b>')+'</div>':'<p style="color:var(--muted)">簡介整理中。</p>')+
   (rs.length?'<h4>參與場次</h4><ul>'+rs.map(function(r){return '<li><span class="num">'+esc(r.s.start)+'</span>　'+r.role+'｜'+esc(r.s.title)+'</li>'}).join("")+'</ul>':'')+'</div>';
   function close(){el.remove();document.removeEventListener("keydown",k)}
   function k(e){if(e.key==="Escape")close()}
