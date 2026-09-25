@@ -20,7 +20,7 @@
   "registerUrl": "",
   "notice": "",
   "noticeOn": false,
-  "showInvited": false,
+  "showInvited": true,
   "travelNote": "大眾運輸路線與轉乘優惠依業者及臺中市政府公告為準，出發前請以臺中市公車動態資訊系統確認。"
  },
  "sessions": [
@@ -33,7 +33,8 @@
    "speakerText": "",
    "speakers": [],
    "moderators": [],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s02",
@@ -44,14 +45,15 @@
    "speakerText": "校院內外貴賓長官",
    "speakers": [],
    "moderators": [],
-   "note": ""
+   "note": "",
+   "moderatorText": "主辦單位代表"
   },
   {
    "id": "s03",
    "start": "13:10",
    "end": "13:35",
    "track": "policy",
-   "title": "健康台灣深耕計畫與兒童醫療永續發展的國家願景",
+   "title": "健康臺灣深耕計畫與兒童醫療永續發展的國家願景",
    "speakerText": "",
    "speakers": [
     "chen_zh"
@@ -59,7 +61,8 @@
    "moderators": [
     "lin_zj"
    ],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s04",
@@ -74,7 +77,8 @@
    "moderators": [
     "chen_zh"
    ],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s05",
@@ -89,7 +93,8 @@
    "moderators": [
     "fan_yz"
    ],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s06",
@@ -104,7 +109,8 @@
    "moderators": [
     "chen_wd"
    ],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s07",
@@ -115,7 +121,8 @@
    "speakerText": "",
    "speakers": [],
    "moderators": [],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s08",
@@ -128,9 +135,10 @@
     "wang_zy"
    ],
    "moderators": [
-    "liu_yp"
+    "chen_zp"
    ],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s09",
@@ -145,7 +153,8 @@
    "moderators": [
     "wang_zy"
    ],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s10",
@@ -160,14 +169,15 @@
    "moderators": [
     "zhou_yq"
    ],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s11",
    "start": "16:10",
    "end": "16:30",
    "track": "practice",
-   "title": "區域兒童醫療創新與人才培育：從醫療品質走向永續發展",
+   "title": "兒童醫療創新與人才培育：從醫療品質走向永續發展",
    "speakerText": "",
    "speakers": [
     "cai_yj"
@@ -175,7 +185,8 @@
    "moderators": [
     "song_wj"
    ],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s12",
@@ -190,7 +201,8 @@
    "moderators": [
     "xie_ks"
    ],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s13",
@@ -211,7 +223,8 @@
     "yang_jr"
    ],
    "moderators": [],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s14",
@@ -222,7 +235,8 @@
    "speakerText": "",
    "speakers": [],
    "moderators": [],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   },
   {
    "id": "s15",
@@ -233,69 +247,70 @@
    "speakerText": "",
    "speakers": [],
    "moderators": [],
-   "note": ""
+   "note": "",
+   "moderatorText": ""
   }
  ],
  "people": [
   {
    "id": "chen_zh",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "陳志鴻",
+   "title": "國策顧問",
+   "org": "中華民國總統府",
    "status": "invited",
    "bio": "",
    "photo": ""
   },
   {
    "id": "lin_zj",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "林正介",
+   "title": "副校長",
+   "org": "中國醫藥大學",
    "status": "invited",
    "bio": "",
    "photo": ""
   },
   {
    "id": "liu_yp",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "劉越萍",
+   "title": "司長",
+   "org": "衛生福利部醫事司",
    "status": "invited",
    "bio": "",
    "photo": ""
   },
   {
    "id": "li_jz",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "李建璋",
+   "title": "處長",
+   "org": "衛生福利部資訊處",
    "status": "invited",
    "bio": "",
    "photo": ""
   },
   {
    "id": "fan_yz",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "范揚政",
+   "title": "院長",
+   "org": "中國醫藥大學附設醫院 台灣數位健康研究院",
    "status": "invited",
    "bio": "",
    "photo": ""
   },
   {
    "id": "fu_yq",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "傅雲慶",
+   "title": "理事長",
+   "org": "臺灣兒科醫學會",
    "status": "invited",
    "bio": "",
    "photo": ""
   },
   {
    "id": "chen_wd",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "陳偉德",
+   "title": "顧問",
+   "org": "中國醫藥大學兒童醫院",
    "status": "invited",
    "bio": "",
    "photo": ""
@@ -311,18 +326,18 @@
   },
   {
    "id": "li_wz",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "李旺祚",
+   "title": "院長",
+   "org": "國立臺灣大學醫學院附設醫院 台大兒童醫院",
    "status": "invited",
    "bio": "",
    "photo": ""
   },
   {
    "id": "chen_zp",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "陳治平",
+   "title": "院長",
+   "org": "馬偕兒童醫院",
    "status": "invited",
    "bio": "",
    "photo": ""
@@ -338,9 +353,9 @@
   },
   {
    "id": "cai_yj",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "蔡易晉",
+   "title": "院長",
+   "org": "彰化基督教兒童醫院",
    "status": "invited",
    "bio": "",
    "photo": ""
@@ -356,9 +371,9 @@
   },
   {
    "id": "yang_jr",
-   "name": "",
-   "title": "",
-   "org": "",
+   "name": "楊俊仁",
+   "title": "院長",
+   "org": "新竹市立馬偕兒童醫院",
    "status": "invited",
    "bio": "",
    "photo": ""

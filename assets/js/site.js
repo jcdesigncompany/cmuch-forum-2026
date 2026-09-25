@@ -87,13 +87,17 @@ function heroHTML(){
 function personInline(ids,label){
   ids=ids||[];if(!ids.length)return "";
   var vis=ids.map(person).filter(visible),hidden=ids.length-vis.length;
-  var h=vis.map(function(p){return '<button class="pbtn" data-person="'+esc(p.id)+'"><b>'+esc(p.name)+'</b> '+esc(p.title)+(p.status!=="confirmed"?'<em class="badge-inv">邀請中</em>':'')+'<span>'+esc(p.org)+'</span></button>'}).join("");
+  var h=vis.map(function(p){return '<button class="pbtn" data-person="'+esc(p.id)+'"><span class="nm"><b>'+esc(p.name)+'</b> '+esc(p.title)+(p.status!=="confirmed"?'<em class="badge-inv">邀請中</em>':'')+'</span><span class="og">'+esc(p.org)+'</span></button>'}).join("");
   if(hidden)h+='<span class="tbc">'+(vis.length?'及其他貴賓（確認中）':label+'確認中')+'</span>';
   return '<div><dt>'+label+'</dt><dd>'+h+'</dd></div>'
 }
+function splitTitle(t){
+  t=String(t||"");var lab="",i=t.indexOf("｜");if(i>0){lab=t.slice(0,i);t=t.slice(i+1)}
+  var j=t.indexOf("：");return {lab:lab,main:j>0?t.slice(0,j):t,sub:j>0?t.slice(j+1):""}
+}
 function matches(s){
   var q=UI.q.trim().toLowerCase();if(!q)return true;
-  var hay=[s.title,s.speakerText,s.note].join(" ");
+  var hay=[s.title,s.speakerText,s.moderatorText,s.note].join(" ");
   (s.speakers||[]).concat(s.moderators||[]).map(person).filter(visible).forEach(function(p){hay+=" "+p.name+" "+p.org+" "+p.title});
   return hay.toLowerCase().indexOf(q)>-1
 }
@@ -103,13 +107,15 @@ function agendaRows(){
   return '<ol class="timeline">'+list.map(function(s){
     var st=toMin(s.start),en=toMin(s.end||s.start),dur=en-st,compact=s.track==="logistics";
     var now=L.diff===0&&L.mins>=st&&L.mins<en,past=L.diff<0||(L.diff===0&&L.mins>=en&&!!s.end);
-    var ppl=compact?"":(s.speakerText?'<div><dt>'+roleLabel(s)+'</dt><dd>'+esc(s.speakerText)+'</dd></div>':'')+personInline(s.speakers,roleLabel(s))+personInline(s.moderators,s.track==="panel"?"主持人":"座長");
+    var mlab=s.track==="panel"||s.track==="opening"?"主持人":"座長";
+    var ppl=compact?"":(s.speakerText?'<div><dt>'+roleLabel(s)+'</dt><dd>'+esc(s.speakerText)+'</dd></div>':'')+personInline(s.speakers,roleLabel(s))+(s.moderatorText?'<div><dt>'+mlab+'</dt><dd>'+esc(s.moderatorText)+'</dd></div>':'')+personInline(s.moderators,mlab);
+    var T=splitTitle(s.title);
     if(!compact&&s.track==="panel"&&!(s.moderators||[]).length&&adminView())ppl+='<div><dt>主持人</dt><dd><span class="tbc">尚未設定</span></dd></div>';
     return '<li class="row t-'+s.track+(compact?' compact':'')+(now?' is-now':'')+(past?' is-past':'')+'" id="s-'+esc(s.id)+'">'+
     '<div class="time"><b>'+esc(s.start)+'</b>'+(s.end?'<span>'+esc(s.end)+'</span>':'')+'</div><div class="dot"></div>'+
-    '<div class="body"><div class="card">'+(compact?'':'<div class="meta"><span class="tag">'+esc(TRACKS[s.track]||"")+'</span>'+(dur>0?'<span class="num">'+dur+' 分鐘</span>':'')+(now?'<span class="now">進行中</span>':'')+'</div>')+
-    '<h3>'+esc(s.title)+(compact&&now?' <span class="meta"><span class="now">進行中</span></span>':'')+'</h3>'+
-    (ppl?'<dl class="people">'+ppl+'</dl>':'')+(s.note?'<p class="hint" style="margin:10px 0 0">'+esc(s.note)+'</p>':'')+
+    '<div class="body"><div class="card">'+(compact?'':'<div class="meta"><span class="tag">'+esc(TRACKS[s.track]||"")+'</span>'+(T.lab?'<span class="lab">'+esc(T.lab)+'</span>':'')+(dur>0?'<span class="num">'+dur+' 分鐘</span>':'')+(now?'<span class="now">進行中</span>':'')+'</div>')+
+    '<h3>'+esc(T.main)+(compact&&now?' <span class="meta"><span class="now">進行中</span></span>':'')+'</h3>'+(T.sub?'<p class="subt">'+esc(T.sub)+'</p>':'')+
+    (ppl?'<dl class="people'+(s.track==="panel"?' panel':'')+'">'+ppl+'</dl>':'')+(s.note?'<p class="hint" style="margin:10px 0 0">'+esc(s.note)+'</p>':'')+
     '</div></div></li>'}).join("")+'</ol>'
 }
 function agendaHTML(){
