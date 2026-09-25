@@ -7,7 +7,11 @@ function isSecretKey(k) {
 }
 export const secretKeyError = isSecretKey(SUPABASE_ANON_KEY);
 if (secretKeyError) console.error("config.js 填入的是 service_role／secret key，請立即改為 anon 或 publishable key，並到 Supabase 重新產生 secret key。");
-export const configured = !/YOUR-/.test(SUPABASE_URL + SUPABASE_ANON_KEY) && !secretKeyError;
+const urlOk = /^https:\/\/[a-z0-9]{20}\.supabase\.co\/?$/.test(SUPABASE_URL);
+const keyOk = /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(SUPABASE_ANON_KEY) || /^sb_publishable_[\w-]+$/.test(SUPABASE_ANON_KEY);
+/** 設定檢查結果：null 表示正常，否則為問題代碼 */
+export const configProblem = secretKeyError ? "secret" : /YOUR-/.test(SUPABASE_URL + SUPABASE_ANON_KEY) ? "unset" : !urlOk ? "url" : !keyOk ? "key" : null;
+export const configured = !configProblem;
 export const sb = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 export function esc(s) {
@@ -105,18 +109,40 @@ export const QR_LIB = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcod
 export const JSQR_LIB = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
 export const ZIP_LIB = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
 
+export const MEAL = { meat: "葷食", veg: "素食" };
+
+/** 身分證字號／居留證號檢查（含檢查碼），與資料庫 valid_tw_id() 規則相同 */
+export function validTwId(p) {
+  const v = String(p || "").trim().toUpperCase();
+  if (!/^[A-Z][0-9A-D][0-9]{8}$/.test(v)) return false;
+  const L = "ABCDEFGHJKLMNPQRSTUVXYWZIO";
+  const c2 = v[1];
+  let d2;
+  if (/[A-D]/.test(c2)) d2 = (L.indexOf(c2) + 10) % 10;
+  else if ("1289".includes(c2)) d2 = +c2;
+  else return false;
+  const n = L.indexOf(v[0]) + 10;
+  let t = Math.floor(n / 10) + (n % 10) * 9 + d2 * 8;
+  for (let i = 2; i <= 8; i++) t += +v[i] * (9 - i);
+  t += +v[9];
+  return t % 10 === 0;
+}
+export const phoneDigits = p => String(p || "").replace(/\D/g, "");
+
 /** 將資料庫錯誤訊息轉為中文 */
 export function errMsg(e) {
   const m = (e && (e.message || e.error_description)) || "";
   const map = {
-    REG_CLOSED: "目前未開放報名。", NO_CONSENT: "請勾選同意個人資料蒐集告知事項。", MISSING_FIELDS: "請填寫姓名、服務單位與電子郵件。",
+    REG_CLOSED: "目前未開放報名。", NO_CONSENT: "請勾選同意個人資料蒐集告知事項。", MISSING_FIELDS: "請填寫所有必填欄位（姓名、服務機構、聯絡電話、用餐習慣）。",
     BAD_EMAIL: "電子郵件格式不正確。", REG_FULL: "報名人數已額滿，感謝您的關注。", DUP_EMAIL: "此電子郵件已完成報名，請使用「查詢報到證」。",
+    BAD_PHONE: "聯絡電話格式不正確，請填寫 8 至 15 位數字。", BAD_ID: "身分證字號格式不正確，請再確認一次。",
+    DUP_ID: "此身分證字號已完成報名，請使用「查詢報到證」。", DUP_PHONE: "此姓名與電話已完成報名，請使用「查詢報到證」。",
     NO_PERMISSION: "您的帳號沒有執行此操作的權限。", "Invalid login credentials": "電子郵件或密碼不正確。",
     "Email not confirmed": "此帳號尚未完成電子郵件驗證，請至信箱點選驗證連結。",
   };
   for (const k in map) if (m.includes(k)) return map[k];
   if (/network|fetch/i.test(m)) return "網路連線不穩，請稍後再試。";
   if (/duplicate key/i.test(m)) return "資料重複，請確認代碼或電子郵件是否已存在。";
-  if (/網域/.test(m)) return m;
+  if (/網域|讀取帳號權限失敗/.test(m)) return m;
   return "操作未完成，請稍後再試。" + (m ? `（${m}）` : "");
 }

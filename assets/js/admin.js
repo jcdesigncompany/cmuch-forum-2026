@@ -1,4 +1,4 @@
-import { sb, configured, secretKeyError, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js";
+import { sb, configured, secretKeyError, configProblem, MEAL, validTwId, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js";
 
 const app = $("#app");
 const ROLE_NAME = { admin: "管理者", checkin: "報到人員", viewer: "檢視者", pending: "待審核", none: "未授權" };
@@ -51,7 +51,8 @@ function renderAuth() { app.innerHTML = authView(); }
 
 /* =================== 資料 =================== */
 async function loadRole() {
-  const { data } = await sb.from("staff_roles").select("role,display_name,email").eq("user_id", st.me).maybeSingle();
+  const { data, error } = await sb.from("staff_roles").select("role,display_name,email").eq("user_id", st.me).maybeSingle();
+  if (error) throw new Error("讀取帳號權限失敗：" + (error.message || error.code) + "。請確認已在 Supabase 執行最新版 schema.sql。");
   st.role = data ? data.role : "none";
   st.myName = data ? (data.display_name || data.email) : "";
 }
@@ -122,14 +123,14 @@ const catTag = k => `<span class="cat ${esc(k)}">${esc(CAT[k] || "一般")}</spa
 function resultHTML() {
   const r = st.last;
   if (!r) return '<div class="result idle"><div><b>請掃描來賓報到證</b><br>掃描槍、鏡頭或手動輸入代碼皆可</div></div>';
-  const who = r.name ? `<div class="nm">${esc(r.name)}${r.title ? `<small>${esc(r.title)}</small>` : ""}</div><div class="og">${esc(r.org || "")}${catTag(r.category)}</div>` : "";
+  const who = r.name ? `<div class="nm">${esc(r.name)}${r.title ? `<small>${esc(r.title)}</small>` : ""}</div><div class="og">${esc(r.org || "")}${r.dept ? "　" + esc(r.dept) : ""}${catTag(r.category)}</div>${r.meal ? `<div class="mealtag ${r.meal}">餐點：${esc(MEAL[r.meal])}</div>` : ""}` : "";
   if (r.status === "ok") return `<div class="result ok" role="status"><div class="st">✓ 報到成功　<span class="num">${esc(tpTime(r.checked_in_at))}</span></div>${who}${r.category === "vip" ? '<div class="vipcall">貴賓到場，請通知接待人員</div>' : r.category === "speaker" ? '<div class="vipcall">講者到場，請引導至講者席</div>' : ""}</div>`;
   if (r.status === "dup") return `<div class="result warn" role="status"><div class="st">! 已於 <span class="num">${esc(tpTime(r.checked_in_at))}</span> 完成報到</div>${who}</div>`;
   return `<div class="result err" role="alert"><div class="st">✕ 查無此代碼</div><div class="nm num">${esc(r.code)}</div><div class="og">請確認代碼，或改用右側姓名搜尋</div></div>`;
 }
 function scanView() {
   const mq = st.mq.trim().toLowerCase();
-  const m = mq ? st.regs.filter(r => (r.name + r.org + r.code).toLowerCase().includes(mq)).slice(0, 12) : [];
+  const m = mq ? st.regs.filter(r => (r.name + r.org + (r.dept || "") + r.code + (r.phone || "")).toLowerCase().includes(mq)).slice(0, 12) : [];
   return `<div class="cols"><div class="stack"><section class="panel"><h2>掃描報到</h2>
     <form class="scan" id="scanform" autocomplete="off"><label class="sr" for="code">報到代碼</label><input id="code" placeholder="掃描或輸入代碼" enterkeyhint="go"><button class="btn pri big" type="submit">報到</button></form>
     <p class="hint">使用條碼掃描槍時，游標停在輸入框即可連續掃描。</p>
@@ -137,9 +138,9 @@ function scanView() {
     ${st.cam ? '<div class="cam"><video id="camv" playsinline muted></video><div class="frame"></div></div>' : ""}
     ${st.camErr ? `<p class="hint" style="color:var(--red)">${esc(st.camErr)}</p>` : ""}
     </section><section>${resultHTML()}</section></div>
-    <div class="stack"><section class="panel"><h2>姓名搜尋</h2><div class="tools"><input type="search" id="mq" placeholder="輸入姓名、單位或代碼" value="${esc(st.mq)}"></div>
-    ${mq ? (m.length ? `<ul class="list">${m.map(r => `<li><div class="who"><b>${esc(r.name)}</b> ${esc(r.title || "")}${catTag(r.category)}<span>${esc(r.org)}</span></div>${r.checked_in_at ? `<span class="ok-t num">✓ ${esc(tpTime(r.checked_in_at))}</span>` : `<button class="btn sm pri" data-checkin="${esc(r.code)}">報到</button>`}</li>`).join("")}</ul>` : '<div class="empty">找不到符合的來賓，可使用下方現場登記。</div>') : '<p class="hint">來賓忘記攜帶報到證時使用。</p>'}
-    </section><section class="panel"><details class="walk"><summary>現場登記（未事先報名）</summary><form id="walkform" style="margin-top:12px"><div class="row2"><label class="field"><span>姓名</span><input name="name" required maxlength="60"></label><label class="field"><span>職稱</span><input name="title" maxlength="60"></label></div><label class="field"><span>服務單位</span><input name="org" required maxlength="120"></label><button class="btn pri" type="submit">登記並報到</button></form></details></section></div></div>`;
+    <div class="stack"><section class="panel"><h2>姓名搜尋</h2><div class="tools"><input type="search" id="mq" placeholder="輸入姓名、機構、電話或代碼" value="${esc(st.mq)}"></div>
+    ${mq ? (m.length ? `<ul class="list">${m.map(r => `<li><div class="who"><b>${esc(r.name)}</b> ${esc(r.title || "")}${catTag(r.category)}<span>${esc(r.org)}${r.dept ? "　" + esc(r.dept) : ""}${r.meal ? "｜" + esc(MEAL[r.meal]) : ""}</span></div>${r.checked_in_at ? `<span class="ok-t num">✓ ${esc(tpTime(r.checked_in_at))}</span>` : `<button class="btn sm pri" data-checkin="${esc(r.code)}">報到</button>`}</li>`).join("")}</ul>` : '<div class="empty">找不到符合的來賓，可使用下方現場登記。</div>') : '<p class="hint">來賓忘記攜帶報到證時使用。</p>'}
+    </section><section class="panel"><details class="walk"><summary>現場登記（未事先報名）</summary><form id="walkform" style="margin-top:12px"><div class="row2"><label class="field"><span>姓名</span><input name="name" required maxlength="60"></label><label class="field"><span>職稱</span><input name="title" maxlength="60"></label></div><div class="row2"><label class="field"><span>服務機構</span><input name="org" required maxlength="120"></label><label class="field"><span>單位</span><input name="dept" maxlength="120"></label></div><label class="field"><span>用餐習慣</span><select name="meal"><option value="meat">葷食</option><option value="veg">素食</option><option value="">不用餐／未知</option></select></label><button class="btn pri" type="submit">登記並報到</button></form></details></section></div></div>`;
 }
 async function checkIn(raw) {
   const code = String(raw || "").trim().toUpperCase().replace(/\s+/g, "");
@@ -193,19 +194,23 @@ function listRows() {
     if (st.filter === "out" && r.checked_in_at) return false;
     if (st.filter === "vip" && !["vip", "speaker"].includes(r.category)) return false;
     if (st.filter === "walk" && r.source !== "walkin") return false;
-    return !q || (r.name + r.org + (r.title || "") + r.code + (r.email || "")).toLowerCase().includes(q);
+    if (st.filter === "veg" && r.meal !== "veg") return false;
+    if (st.filter === "credit" && !r.need_credit) return false;
+    return !q || (r.name + r.org + (r.dept || "") + (r.title || "") + r.code + (r.email || "") + (r.phone || "")).toLowerCase().includes(q);
   }).sort((a, b) => (o[a.category] - o[b.category]) || a.org.localeCompare(b.org, "zh-Hant") || a.name.localeCompare(b.name, "zh-Hant"));
 }
 function listView() {
-  const rows = listRows(), f = [["all", "全部"], ["in", "已報到"], ["out", "未報到"], ["vip", "貴賓與講者"], ["walk", "現場登記"]];
-  const body = rows.length ? `<div class="tblw"><table class="tbl"><thead><tr><th>代碼</th><th>姓名</th><th class="hide-s">單位／職稱</th>${isAdmin() ? '<th class="hide-s">類別</th>' : ""}<th>狀態</th><th></th></tr></thead><tbody>${rows.map(r => `<tr>
+  const rows = listRows(), f = [["all", "全部"], ["in", "已報到"], ["out", "未報到"], ["vip", "貴賓與講者"], ["veg", "素食"], ["credit", "申請積分"], ["walk", "現場登記"]];
+  const body = rows.length ? `<div class="tblw"><table class="tbl"><thead><tr><th>代碼</th><th>姓名</th><th class="hide-s">機構／單位／職稱</th><th>用餐</th><th class="hide-s">積分</th>${isAdmin() ? '<th class="hide-s">類別</th>' : ""}<th>狀態</th><th></th></tr></thead><tbody>${rows.map(r => `<tr>
     <td class="code">${esc(r.code)}</td><td><b>${esc(r.name)}</b>${isAdmin() ? "" : catTag(r.category)}${r.source === "walkin" ? '<span class="cat general">現場</span>' : ""}</td>
-    <td class="hide-s">${esc(r.org)}${r.title ? "　" + esc(r.title) : ""}</td>
+    <td class="hide-s">${esc(r.org)}${r.dept ? "　" + esc(r.dept) : ""}${r.title ? "　" + esc(r.title) : ""}${r.phone ? `<div class="hint" style="margin:0">${esc(r.phone)}</div>` : ""}</td>
+    <td>${r.meal ? `<span class="mealtag ${r.meal} sm">${esc(MEAL[r.meal])}</span>` : '<span class="no-t">—</span>'}</td>
+    <td class="hide-s">${r.need_credit ? `<span class="num" title="身分證字號（遮罩）">${esc(r.id_masked || "申請")}</span>` : '<span class="no-t">—</span>'}</td>
     ${isAdmin() ? `<td class="hide-s"><select data-cat="${esc(r.id)}" aria-label="類別">${Object.keys(CAT).map(k => `<option value="${k}"${r.category === k ? " selected" : ""}>${CAT[k]}</option>`).join("")}</select></td>` : ""}
     <td>${r.checked_in_at ? `<span class="ok-t num">✓ ${esc(tpTime(r.checked_in_at))}</span>` : '<span class="no-t">未報到</span>'}</td>
     <td class="acts">${canCheck() ? (r.checked_in_at ? `<button class="btn sm" data-undo="${esc(r.code)}">取消報到</button>` : `<button class="btn sm pri" data-checkin="${esc(r.code)}">報到</button>`) : ""}${isAdmin() ? ` <button class="btn sm" data-qr="${esc(r.code)}">QR</button> <button class="btn sm danger" data-del="${esc(r.id)}" aria-label="刪除">刪除</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty">${st.regs.length ? "沒有符合條件的資料。" : "尚無報名資料。"}</div>`;
-  return `<h2>報名名單</h2><div class="tools"><input type="search" id="lq" placeholder="搜尋姓名、單位、代碼或電子郵件" value="${esc(st.q)}"><div class="seg">${f.map(x => `<button data-filter="${x[0]}" aria-pressed="${st.filter === x[0]}">${x[1]}</button>`).join("")}</div>${isAdmin() ? '<button class="btn sm" data-act="csv">下載 CSV</button>' : ""}</div><p class="hint" style="margin:-6px 0 12px">共 ${rows.length} 筆</p>${body}`;
+  return `<h2>報名名單</h2><div class="tools"><input type="search" id="lq" placeholder="搜尋姓名、機構、單位、電話或代碼" value="${esc(st.q)}"><div class="seg">${f.map(x => `<button data-filter="${x[0]}" aria-pressed="${st.filter === x[0]}">${x[1]}</button>`).join("")}</div>${isAdmin() ? '<button class="btn sm" data-act="csv">下載 CSV</button>' : ""}</div><p class="hint" style="margin:-6px 0 12px">共 ${rows.length} 筆</p>${body}`;
 }
 function showQR(code) {
   const r = byCode(code); if (!r) return;
@@ -258,11 +263,14 @@ function overviewView() {
   return `<div class="ovhead"><h2>報名概況</h2><span class="regstate ${R.open ? "on" : ""}">${R.open ? "● 報名開放中" : "○ 報名未開放"}</span>${isAdmin() && st.C ? `<button class="btn sm" data-act="togglereg">${R.open ? "關閉報名" : "開放報名"}</button>` : ""}<a class="btn sm" href="register.html" target="_blank" rel="noopener">檢視報名頁</a></div>
   <dl class="kpis"><div class="kpi"><dt>報名人數${cap ? "／上限" : ""}</dt><dd>${pre.length}${cap ? `<small> / ${cap}</small>` : ""}</dd>${cap ? `<div class="bar"><i style="width:${Math.min(100, pre.length / cap * 100)}%"></i></div>` : ""}</div>
     <div class="kpi"><dt>今日新增（線上）</dt><dd>${nToday}</dd></div><div class="kpi"><dt>近 7 日新增（線上）</dt><dd>${nWeek}</dd></div>
-    <div class="kpi"><dt>${cap ? "剩餘名額" : "線上報名累計"}</dt><dd>${cap ? Math.max(0, cap - pre.length) : online.length}</dd></div></dl>
+    <div class="kpi"><dt>${cap ? "剩餘名額" : "線上報名累計"}</dt><dd>${cap ? Math.max(0, cap - pre.length) : online.length}</dd></div>
+    <div class="kpi"><dt>用餐：葷食／素食</dt><dd>${pre.filter(r => r.meal === "meat").length}<small> / </small>${pre.filter(r => r.meal === "veg").length}</dd>${pre.some(r => !r.meal) ? `<div class="hint" style="margin:2px 0 0">未填 ${pre.filter(r => !r.meal).length} 人</div>` : ""}</div>
+    <div class="kpi"><dt>申請繼續教育積分</dt><dd>${pre.filter(r => r.need_credit).length}<small> 人</small></dd></div></dl>
   <div class="cols" style="margin-top:18px"><section class="panel"><h3>每日報名人數</h3><p class="hint" style="margin:-4px 0 8px">含線上報名與名單匯入，最近 30 日；游標移到長條可看累計人數。</p>${dailyChart(pre)}</section>
-    <section class="panel"><h3>最新線上報名</h3>${latest.length ? `<ul class="list">${latest.map(r => `<li><div class="who"><b>${esc(r.name)}</b> ${esc(r.title || "")}<span>${esc(r.org)}</span></div><span class="hint num" style="margin:0">${esc(tpStamp(r.created_at).replace(/:\d\d$/, ""))}</span></li>`).join("")}</ul>` : '<div class="empty">尚無線上報名。</div>'}</section></div>
-  <div class="cols" style="margin-top:18px"><section class="panel"><h3>服務單位（前 10）</h3>${hbars(countBy(pre, r => r.org).slice(0, 10), pre.length, "服務單位")}</section>
-    <div class="stack"><section class="panel"><h3>類別</h3>${hbars(Object.keys(CAT).map(k => [CAT[k], pre.filter(r => r.category === k).length]), pre.length, "類別")}</section>
+    <section class="panel"><h3>最新線上報名</h3>${latest.length ? `<ul class="list">${latest.map(r => `<li><div class="who"><b>${esc(r.name)}</b> ${esc(r.title || "")}<span>${esc(r.org)}${r.dept ? "　" + esc(r.dept) : ""}${r.meal ? "｜" + esc(MEAL[r.meal]) : ""}</span></div><span class="hint num" style="margin:0">${esc(tpStamp(r.created_at).replace(/:\d\d$/, ""))}</span></li>`).join("")}</ul>` : '<div class="empty">尚無線上報名。</div>'}</section></div>
+  <div class="cols" style="margin-top:18px"><section class="panel"><h3>服務機構（前 10）</h3>${hbars(countBy(pre, r => r.org).slice(0, 10), pre.length, "服務機構")}</section>
+    <div class="stack"><section class="panel"><h3>用餐習慣</h3>${hbars([["葷食", pre.filter(r => r.meal === "meat").length], ["素食", pre.filter(r => r.meal === "veg").length], ["未填", pre.filter(r => !r.meal).length]], pre.length, "用餐習慣")}</section>
+    <section class="panel"><h3>類別</h3>${hbars(Object.keys(CAT).map(k => [CAT[k], pre.filter(r => r.category === k).length]), pre.length, "類別")}</section>
     <section class="panel"><h3>報名來源</h3>${hbars(Object.keys(SRC).map(k => [SRC[k], pre.filter(r => r.source === k).length]), pre.length, "報名來源")}</section></div></div>
   <section class="panel" style="margin-top:18px"><h3>Google 雲端硬碟同步</h3>
     ${S && S.last_sync_at ? `<p style="margin:0">最後同步：<b class="num">${esc(tpStamp(S.last_sync_at))}</b>（${S.last_count} 筆）${stale ? '　<span style="color:var(--amber);font-weight:700">! 已超過 20 分鐘未同步，請檢查試算表的自動同步設定</span>' : ""}</p>${S.sheet_url ? `<p style="margin:8px 0 0"><a class="btn sm" href="${esc(S.sheet_url)}" target="_blank" rel="noopener">開啟 Google 試算表</a></p>` : ""}`
@@ -277,7 +285,7 @@ function statsView(c) {
   const log = st.regs.filter(r => r.checked_in_at).sort((a, b) => a.checked_in_at < b.checked_in_at ? 1 : -1).slice(0, 12);
   return `<dl class="kpis"><div class="kpi"><dt>已報到／報名</dt><dd>${c.inn}<small> / ${c.total}</small></dd></div><div class="kpi"><dt>報到率</dt><dd>${pct}<small>%</small></dd><div class="bar"><i style="width:${pct}%"></i></div></div><div class="kpi"><dt>尚未報到</dt><dd>${c.total - c.inn}</dd></div><div class="kpi"><dt>現場登記</dt><dd>${c.walk}</dd></div></dl>
   <div class="cols" style="margin-top:18px"><section class="panel"><h3>貴賓與講者到場狀態</h3>${vips.length ? `<ul class="list">${vips.map(r => `<li><div class="who"><b>${esc(r.name)}</b> ${esc(r.title || "")}${catTag(r.category)}<span>${esc(r.org)}</span></div>${r.checked_in_at ? `<span class="ok-t num">✓ ${esc(tpTime(r.checked_in_at))}</span>` : '<span class="no-t">尚未到場</span>'}</li>`).join("")}</ul>` : '<div class="empty">名單中尚無貴賓或講者。管理者可於「報名名單」調整類別。</div>'}</section>
-  <div class="stack"><section class="panel"><h3>各類別報到情形</h3>${Object.keys(CAT).map(k => { const x = c.cat[k], p = x.t ? Math.round(x.i / x.t * 100) : 0; return `<div class="catrow"><span>${CAT[k]}</span><div class="bar"><i style="width:${p}%"></i></div><span class="v">${x.i} / ${x.t}</span></div>`; }).join("")}</section>
+  <div class="stack"><section class="panel"><h3>用餐人數（已報到／報名）</h3>${[["meat", "葷食"], ["veg", "素食"]].map(([k, n]) => { const x = st.regs.filter(r => r.meal === k), i = x.filter(r => r.checked_in_at).length, p = x.length ? Math.round(i / x.length * 100) : 0; return `<div class="catrow"><span>${n}</span><div class="bar"><i style="width:${p}%"></i></div><span class="v">${i} / ${x.length}</span></div>`; }).join("")}<p class="hint" style="margin:6px 0 0">含現場登記；可用於現場餐點發放與追加。</p></section><section class="panel"><h3>各類別報到情形</h3>${Object.keys(CAT).map(k => { const x = c.cat[k], p = x.t ? Math.round(x.i / x.t * 100) : 0; return `<div class="catrow"><span>${CAT[k]}</span><div class="bar"><i style="width:${p}%"></i></div><span class="v">${x.i} / ${x.t}</span></div>`; }).join("")}</section>
   <section class="panel"><h3>最新報到紀錄</h3>${log.length ? `<ul class="list">${log.map(r => `<li><div class="who"><b>${esc(r.name)}</b>${r.source === "walkin" ? '<span class="cat general">現場登記</span>' : ""}<span>${esc(r.org)}</span></div><div style="text-align:right"><span class="num">${esc(tpTime(r.checked_in_at))}</span><span class="hint" style="display:block;margin:0">${r.checked_in_by ? "經手：" + esc(st.names[r.checked_in_by] || (r.checked_in_by === st.me ? st.myName : "工作人員")) : ""}</span></div></li>`).join("")}</ul>` : '<div class="empty">尚無報到紀錄。</div>'}</section></div></div>`;
 }
 
@@ -391,11 +399,12 @@ function parseCSV(text) {
   if (f || row.length) { row.push(f); rows.push(row); }
   const clean = rows.filter(r => r.some(x => x.trim())); if (!clean.length) return [];
   const h = clean[0].map(x => x.trim()), hasH = h.some(x => /姓名|name/i.test(x));
-  const map = { name: /姓名|name/i, org: /單位|機構|org/i, title: /職稱|title/i, category: /類別|身分|身份|category/i, code: /代碼|code/i, email: /郵件|email|mail/i, note: /備註|note/i };
-  const def = { name: 0, org: 1, title: 2, category: 3, code: 4, email: 5, note: 6 }, idx = {};
+  const map = { name: /姓名|name/i, org: /機構|^org/i, dept: /^單位$|部門|科別|dept/i, title: /職稱|title/i, phone: /電話|手機|phone/i, meal: /用餐|餐|meal/i, idno: /身分證|證號|id/i, category: /類別|category/i, code: /代碼|code/i, email: /郵件|email|mail/i, note: /備註|note/i };
+  const def = { name: 0, org: 1, dept: 2, title: 3, phone: 4, meal: 5, idno: 6, category: 7, code: 8, email: 9, note: 10 }, idx = {};
   for (const k in map) idx[k] = hasH ? h.findIndex(x => map[k].test(x)) : def[k];
+  if (hasH && idx.org < 0) idx.org = h.findIndex(x => /單位/.test(x));
   const emails = new Set(st.regs.map(r => (r.email || "").toLowerCase()).filter(Boolean)), codes = new Set(st.regs.map(r => r.code));
-  const out = []; out.bad = 0; out.dup = 0;
+  const out = []; out.bad = 0; out.dup = 0; out.badId = 0;
   (hasH ? clean.slice(1) : clean).forEach(r => {
     const g = k => idx[k] > -1 && r[idx[k]] != null ? String(r[idx[k]]).trim() : "";
     const name = g("name"), org = g("org"); if (!name || !org) { out.bad++; return; }
@@ -403,28 +412,43 @@ function parseCSV(text) {
     if ((email && emails.has(email)) || (code && codes.has(code))) { out.dup++; return; }
     if (email) emails.add(email); if (code) codes.add(code);
     const c = g("category"), cat = /貴賓|vip/i.test(c) ? "vip" : /講者|座長|主持|與談|speaker/i.test(c) ? "speaker" : /工作|staff/i.test(c) ? "staff" : "general";
-    const row = { name, org, title: g("title") || null, category: cat, email: email || null, note: g("note") || null, source: "import" };
-    if (code) row.code = code; out.push(row);
+    const idno = g("idno").toUpperCase().replace(/\s/g, "");
+    if (idno && !validTwId(idno)) { out.badId++; return; }
+    const ml = g("meal"), meal = /素|veg/i.test(ml) ? "veg" : /葷|meat/i.test(ml) ? "meat" : null;
+    const row = { name, org, dept: g("dept") || null, title: g("title") || null, phone: g("phone") || null, meal, category: cat, email: email || null, note: g("note") || null, source: "import" };
+    if (code) row.code = code; if (idno) row._id = idno; out.push(row);
   });
   return out;
 }
 function importView() {
   const ir = st.importRows;
-  return `<div class="cols"><div class="stack"><section class="panel"><h2>匯入名單</h2><p class="hint" style="margin-top:0">適用於貴賓、講者等由承辦單位直接建檔的名單。欄位：姓名、單位、職稱、類別、報到代碼、電子郵件、備註。姓名與單位為必填，報到代碼留白由系統產生。</p>
+  return `<div class="cols"><div class="stack"><section class="panel"><h2>匯入名單</h2><p class="hint" style="margin-top:0">適用於貴賓、講者等由承辦單位直接建檔的名單。欄位：姓名、服務機構、單位、職稱、聯絡電話、用餐（葷／素）、身分證字號（需申請積分者）、類別、報到代碼、電子郵件、備註。姓名與服務機構為必填，報到代碼留白由系統產生。</p>
     <div class="tools" style="margin-top:12px"><label class="btn">選擇 CSV 檔<input type="file" accept=".csv,text/csv" id="csvfile" hidden></label><button class="btn" data-act="template">下載範本</button></div>
-    <label class="field"><span>或直接貼上（可從 Excel 複製）</span><textarea id="paste" placeholder="姓名,單位,職稱,類別"></textarea></label><button class="btn" data-act="parsepaste">解析貼上內容</button>
-    ${ir ? `<div class="note" style="margin-top:14px">可匯入 <b>${ir.length}</b> 筆${ir.dup ? `；${ir.dup} 筆代碼或電子郵件重複已略過` : ""}${ir.bad ? `；${ir.bad} 筆缺少姓名或單位已略過` : ""}。
+    <label class="field"><span>或直接貼上（可從 Excel 複製）</span><textarea id="paste" placeholder="姓名,服務機構,單位,職稱,聯絡電話,用餐,身分證字號,類別"></textarea></label><button class="btn" data-act="parsepaste">解析貼上內容</button>
+    ${ir ? `<div class="note" style="margin-top:14px">可匯入 <b>${ir.length}</b> 筆${ir.dup ? `；${ir.dup} 筆代碼或電子郵件重複已略過` : ""}${ir.bad ? `；${ir.bad} 筆缺少姓名或機構已略過` : ""}${ir.badId ? `；${ir.badId} 筆身分證字號格式不正確已略過` : ""}。
       <div class="tblw" style="margin-top:10px;max-height:220px;overflow:auto"><table class="tbl"><tbody>${ir.slice(0, 8).map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.org)}</td><td>${esc(CAT[r.category])}</td></tr>`).join("")}</tbody></table></div>
       <div class="tools" style="margin:12px 0 0"><button class="btn pri" data-act="doimport"${st.busy || !ir.length ? " disabled" : ""}>${st.busy ? "匯入中…" : "確認匯入"}</button><button class="btn" data-act="cancelimport">取消</button></div></div>` : ""}
     </section></div>
-    <div class="stack"><section class="panel"><h2>匯出</h2><p class="hint" style="margin-top:0">QR code 圖檔以「代碼＿姓名」命名，ZIP 內附名單 CSV，可搭配提醒信寄送。</p><div class="tools" style="margin-top:12px"><button class="btn pri" data-act="zip"${st.regs.length ? "" : " disabled"}>下載全部報到證（ZIP）</button><button class="btn" data-act="csv">下載名單 CSV</button></div></section>
+    <div class="stack"><section class="panel"><h2>匯出</h2><p class="hint" style="margin-top:0">QR code 圖檔以「代碼＿姓名」命名，ZIP 內附名單 CSV，可搭配提醒信寄送。</p><div class="tools" style="margin-top:12px"><button class="btn pri" data-act="zip"${st.regs.length ? "" : " disabled"}>下載全部報到證（ZIP）</button><button class="btn" data-act="csv">下載名單 CSV</button></div>
+    <p class="hint" style="margin:14px 0 8px">申請繼續教育積分時，需要完整身分證字號的名單：</p><button class="btn danger" data-act="csvid">下載積分申請名單（含完整身分證字號）</button></section>
     <section class="panel"><h2>資料清除</h2><p class="hint" style="margin-top:0">演練結束或活動結案後使用，刪除後無法復原。</p><div class="tools" style="margin-top:12px"><button class="btn danger" data-act="clearcheckins">清除全部報到紀錄</button><button class="btn danger" data-act="clearall">刪除全部報名資料</button></div></section></div></div>`;
 }
-function csvOut() {
-  const L = [["報到代碼", "姓名", "單位", "職稱", "類別", "電子郵件", "聯絡電話", "來源", "報名時間", "報到狀態", "報到時間", "備註"]];
+async function loadPrivateIds() {
+  if (!isAdmin()) return {};
+  const m = {}; let from = 0;
+  for (;;) {
+    const { data, error } = await sb.from("registration_private").select("registration_id,id_number").range(from, from + 999);
+    if (error) { toast("無法讀取身分證字號，CSV 僅含遮罩：" + errMsg(error)); break; }
+    data.forEach(x => { m[x.registration_id] = x.id_number; }); if (data.length < 1000) break; from += 1000;
+  }
+  return m;
+}
+function csvOut(ids) {
+  const full = !!ids;
+  const L = [["報到代碼", "姓名", "服務機構", "單位", "職稱", "聯絡電話", "用餐", "申請積分", full ? "身分證字號" : "身分證字號（遮罩）", "類別", "電子郵件", "來源", "報名時間", "報到狀態", "報到時間", "備註"]];
   const src = { online: "線上報名", import: "名單匯入", walkin: "現場登記", manual: "人工建檔" };
-  st.regs.forEach(r => L.push([r.code, r.name, r.org, r.title, CAT[r.category], r.email, r.phone, src[r.source], tpStamp(r.created_at), r.checked_in_at ? "已報到" : "未報到", r.checked_in_at ? tpStamp(r.checked_in_at) : "", r.note]));
-  return "\uFEFF" + L.map(r => r.map(v => { v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(",")).join("\r\n");
+  st.regs.forEach(r => L.push([r.code, r.name, r.org, r.dept, r.title, r.phone, MEAL[r.meal] || "", r.need_credit ? "是" : "否", full ? (ids[r.id] || "") : (r.id_masked || ""), CAT[r.category], r.email, src[r.source], tpStamp(r.created_at), r.checked_in_at ? "已報到" : "未報到", r.checked_in_at ? tpStamp(r.checked_in_at) : "", r.note]));
+  return "\uFEFF" + L.map(r => r.map(v => { v = String(v ?? ""); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(",")).join("\r\n");
 }
 async function zipAll() {
   toast("正在產生報到證…");
@@ -482,13 +506,22 @@ document.addEventListener("click", async e => {
   const a = d.act;
   if (a === "camon") camOn(); else if (a === "camoff") camOff();
   else if (a === "csv") downloadText(csvOut(), "論壇報名名單.csv", "text/csv;charset=utf-8");
-  else if (a === "template") downloadText("\uFEFF姓名,單位,職稱,類別,報到代碼,電子郵件,備註\r\n王小明,中國醫藥大學兒童醫院,主治醫師,一般,,,\r\n", "名單匯入範本.csv", "text/csv;charset=utf-8");
+  else if (a === "csvid") { if (!confirm("此檔案含完整身分證字號，僅供申請繼續教育積分使用。請存放於加密或受控的位置，用畢刪除，勿以電子郵件或通訊軟體傳送。確定下載？")) return; downloadText(csvOut(await loadPrivateIds()), "論壇報名名單_含身分證字號.csv", "text/csv;charset=utf-8"); }
+  else if (a === "template") downloadText("\uFEFF姓名,服務機構,單位,職稱,聯絡電話,用餐,身分證字號,類別,報到代碼,電子郵件,備註\r\n王小明,中國醫藥大學兒童醫院,小兒科,主治醫師,0912345678,葷,,一般,,,\r\n", "名單匯入範本.csv", "text/csv;charset=utf-8");
   else if (a === "parsepaste") { const rows = parseCSV($("#paste").value); if (!rows.length && !rows.dup) return toast("未解析到資料，請確認內容含姓名與單位"); st.importRows = rows; render(); }
   else if (a === "cancelimport") { st.importRows = null; render(); }
   else if (a === "doimport") {
-    st.busy = true; render(); let ok = 0;
-    for (let i = 0; i < st.importRows.length; i += 200) { const { error } = await sb.from("registrations").insert(st.importRows.slice(i, i + 200)); if (error) { toast(errMsg(error)); break; } ok += Math.min(200, st.importRows.length - i); }
-    st.busy = false; st.importRows = null; toast(`已匯入 ${ok} 筆`); await loadRegs(); render();
+    st.busy = true; render(); let ok = 0, idFail = 0;
+    const rows = st.importRows;
+    for (let i = 0; i < rows.length; i += 200) {
+      const chunk = rows.slice(i, i + 200);
+      const { data, error } = await sb.from("registrations").insert(chunk.map(({ _id, ...r }) => ({ ...r, need_credit: !!_id }))).select("id");
+      if (error) { toast(errMsg(error)); break; }
+      ok += data.length;
+      const priv = data.map((d, k) => chunk[k]._id ? { registration_id: d.id, id_number: chunk[k]._id, id_hash: "" } : null).filter(Boolean);
+      for (const p of priv) { const r = await sb.from("registration_private").insert(p); if (r.error) idFail++; }
+    }
+    st.busy = false; st.importRows = null; toast(`已匯入 ${ok} 筆${idFail ? `；${idFail} 筆身分證字號重複或無效，未寫入` : ""}`); await loadRegs(); render();
   }
   else if (a === "zip") zipAll();
   else if (a === "clearcheckins") { if (prompt("將清除全部報到紀錄，並刪除現場登記資料。請輸入「確認清除」繼續") !== "確認清除") return;
@@ -523,7 +556,7 @@ document.addEventListener("submit", async e => {
   if (f.id === "f-auth") return onAuthSubmit(f);
   if (f.id === "scanform") { const i = $("#code"), v = i.value; i.value = ""; checkIn(v); return i.focus(); }
   if (f.id === "walkform") { const d = Object.fromEntries(new FormData(f)); if (!d.name.trim() || !d.org.trim()) return;
-    const { data, error } = await sb.rpc("walk_in", { p_name: d.name, p_org: d.org, p_title: d.title || "" }); if (error) return toast(errMsg(error));
+    const { data, error } = await sb.rpc("walk_in", { p_name: d.name, p_org: d.org, p_dept: d.dept || "", p_title: d.title || "", p_meal: d.meal || "" }); if (error) return toast(errMsg(error));
     st.last = data; beep(true); toast("已完成現場登記"); await loadRegs(); return render(); }
   if (f.id === "f-pw" || f.id === "f-newpw") { const pw = new FormData(f).get("pw"); const { error } = await sb.auth.updateUser({ password: pw });
     if (f.id === "f-newpw") { if (error) { st.authMsg = { ok: false, t: errMsg(error) }; return renderAuth(); } st.recovery = false; return boot(); }
@@ -568,13 +601,20 @@ async function boot() {
   }
   render();
 }
-if (secretKeyError) app.innerHTML = '<div class="gate"><h2>金鑰設定錯誤，已停止運作</h2><p>assets/js/config.js 填入的是 service_role 或 secret key，這把金鑰可以繞過所有權限。請立即改填 anon 或 publishable key，並到 Supabase 重新產生 secret key。</p></div>';
-else if (!configured) app.innerHTML = '<div class="gate"><h2>尚未完成系統設定</h2><p>請在 assets/js/config.js 填入 Supabase 專案網址與 anon key，詳見 README.md。</p></div>';
+const CONFIG_MSG = {
+  secret: ["金鑰設定錯誤，已停止運作", "assets/js/config.js 填入的是 service_role 或 secret key，這把金鑰可以繞過所有權限。請立即改填 anon 或 publishable key，並到 Supabase 重新產生 secret key。"],
+  unset: ["尚未完成系統設定", "請在 assets/js/config.js 填入 Supabase 專案網址與公開金鑰，詳見 README.md。"],
+  url: ["專案網址格式不正確", "assets/js/config.js 的 SUPABASE_URL 應為 https://（20 碼英數字）.supabase.co，結尾不要加 /rest/v1/ 等路徑。"],
+  key: ["公開金鑰格式不正確", "assets/js/config.js 的 SUPABASE_ANON_KEY 應為 eyJ 開頭的 anon public key，或 sb_publishable_ 開頭的 publishable key（Supabase → Project Settings → API Keys）。請勿填入網址。"],
+};
+function gateMsg(t, d) { app.innerHTML = `<div class="gate"><h2>${esc(t)}</h2><p>${esc(d)}</p></div>`; }
+if (configProblem) gateMsg(...CONFIG_MSG[configProblem]);
 else {
   sb.auth.onAuthStateChange((ev, session) => {
     if (ev === "PASSWORD_RECOVERY") { st.recovery = true; st.authMsg = null; renderAuth(); }
     else if (ev === "SIGNED_IN" && !st.recovery && session?.user?.id !== st.me) setTimeout(boot, 0);
     else if (ev === "SIGNED_OUT") { Object.assign(st, { session: null, me: null, role: "none", regs: [], staff: [], C: null, cDirty: false, tab: "scan", booted: false }); if (st.cam) camOff(); renderAuth(); }
   });
-  boot();
+  const guard = setTimeout(() => { if (/系統連線中/.test(app.textContent)) gateMsg("無法連線到資料庫", "請確認 assets/js/config.js 的專案網址與金鑰正確，且 Supabase 專案未暫停；確認後重新整理頁面。"); }, 12000);
+  boot().catch(e => gateMsg("無法連線到資料庫", errMsg(e))).finally(() => clearTimeout(guard));
 }

@@ -1,4 +1,4 @@
-import { sb, configured, loadContent, esc, $, dateZh, ticketCard, drawQR, downloadCanvas, calUrl, mapsUrl, errMsg } from "./common.js";
+import { sb, configured, loadContent, esc, $, dateZh, MEAL, ticketCard, drawQR, downloadCanvas, calUrl, mapsUrl, errMsg } from "./common.js";
 
 const app = $("#app");
 const qs = new URLSearchParams(location.search);
@@ -8,9 +8,9 @@ try { S = (await loadContent()).S; } catch { app.innerHTML = '<div class="msg er
 const I = S.info;
 
 function lookupForm(msg) {
-  return `<h1>查詢報到證</h1><p class="lead">輸入報名時填寫的姓名與電子郵件。</p>
+  return `<h1>查詢報到證</h1><p class="lead">輸入報名時填寫的姓名與聯絡電話。</p>
   <form class="box" id="lookup">${msg ? `<div class="msg err" role="alert">${esc(msg)}</div>` : ""}
-  <div class="two"><label class="f"><span>姓名</span><input name="name" required></label><label class="f"><span>電子郵件</span><input name="email" type="email" required></label></div>
+  <div class="two"><label class="f"><span>姓名</span><input name="name" required></label><label class="f"><span>聯絡電話</span><input name="phone" type="tel" inputmode="tel" required></label></div>
   <button class="btn btn-blue" type="submit">查詢</button></form>
   <p style="margin-top:18px">尚未報名？<a href="register.html">前往線上報名</a></p>`;
 }
@@ -25,7 +25,8 @@ async function show() {
   <div class="box ticket">
     <div style="font-size:14px;color:var(--muted)">${esc(I.line1 + I.line2)}</div>
     <div class="nm">${esc(t.name)}${t.title ? ` <small style="font-size:16px;font-weight:500">${esc(t.title)}</small>` : ""}</div>
-    <div class="og">${esc(t.org)}</div>
+    <div class="og">${esc(t.org)}${t.dept ? "　" + esc(t.dept) : ""}</div>
+    ${t.meal ? `<div class="og" style="margin-top:4px">用餐：<b>${esc(MEAL[t.meal])}</b>${t.need_credit ? "　｜　申請繼續教育積分" : ""}</div>` : ""}
     <div id="qr"></div>
     <div class="code">${esc(t.code)}</div>
     <span class="state${t.checked_in_at ? " done" : ""}">${t.checked_in_at ? "已完成報到" : "尚未報到"}</span>
@@ -40,8 +41,8 @@ show();
 app.addEventListener("submit", async (e) => {
   e.preventDefault();
   const d = Object.fromEntries(new FormData(e.target));
-  const { data, error } = await sb.rpc("find_ticket", { p_email: d.email || "", p_name: d.name || "" });
+  const { data, error } = await sb.rpc("find_ticket", { p_name: d.name || "", p_phone: d.phone || "" });
   if (error) { app.innerHTML = lookupForm(errMsg(error)); return; }
-  if (!data) { app.innerHTML = lookupForm("查無報名資料，請確認姓名與電子郵件是否與報名時相同。"); return; }
+  if (!data) { app.innerHTML = lookupForm("查無報名資料，請確認姓名與聯絡電話是否與報名時相同。"); return; }
   location.href = "ticket.html?t=" + encodeURIComponent(data);
 });

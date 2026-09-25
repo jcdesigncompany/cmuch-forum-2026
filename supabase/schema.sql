@@ -73,6 +73,61 @@ alter table public.registrations alter column code set default public.gen_code()
 create unique index if not exists registrations_email_uq
   on public.registrations (lower(email)) where email is not null and email <> '';
 
+-- 報名欄位（2026/09/25 新增：單位、用餐、申請積分）
+alter table public.registrations add column if not exists dept text check (char_length(dept) <= 120);
+alter table public.registrations add column if not exists meal text check (meal in ('meat','veg'));
+alter table public.registrations add column if not exists need_credit boolean not null default false;
+alter table public.registrations add column if not exists id_masked text;
+create index if not exists registrations_phone_name on public.registrations (name, (regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g')));
+
+-- 身分證字號／居留證號檢查（含檢查碼）
+create or replace function public.valid_tw_id(p text)
+returns boolean language plpgsql immutable as $$
+declare
+  letters constant text := 'ABCDEFGHJKLMNPQRSTUVXYWZIO';
+  v text := upper(trim(coalesce(p, '')));
+  n int; d2 int; total int;
+begin
+  if v !~ '^[A-Z][0-9A-D][0-9]{8}$' then return false; end if;
+  if substr(v, 2, 1) ~ '[A-D]' then
+    d2 := (position(substr(v, 2, 1) in letters) + 9) % 10;   -- 舊式居留證第二碼
+  elsif substr(v, 2, 1) in ('1','2','8','9') then
+    d2 := substr(v, 2, 1)::int;
+  else
+    return false;
+  end if;
+  n := position(substr(v, 1, 1) in letters) + 9;
+  total := (n / 10) + (n % 10) * 9 + d2 * 8;
+  for i in 3..9 loop
+    total := total + substr(v, i, 1)::int * (10 - i);
+  end loop;
+  total := total + substr(v, 10, 1)::int;
+  return total % 10 = 0;
+end $$;
+
+-- 身分證字號另存於僅管理者可讀取的資料表；其他畫面只顯示遮罩（例：A12****789）
+create table if not exists public.registration_private (
+  registration_id uuid primary key references public.registrations(id) on delete cascade,
+  id_number text not null,
+  id_hash text not null unique
+);
+
+create or replace function public.registration_private_prepare()
+returns trigger language plpgsql security definer set search_path = public, extensions as $$
+begin
+  new.id_number := upper(trim(new.id_number));
+  if not public.valid_tw_id(new.id_number) then raise exception 'BAD_ID'; end if;
+  new.id_hash := encode(digest(new.id_number, 'sha256'), 'hex');
+  update public.registrations
+     set id_masked = substr(new.id_number, 1, 3) || '****' || substr(new.id_number, 8, 3),
+         need_credit = true
+   where id = new.registration_id;
+  return new;
+end $$;
+drop trigger if exists registration_private_prepare on public.registration_private;
+create trigger registration_private_prepare before insert or update on public.registration_private
+  for each row execute function public.registration_private_prepare();
+
 -- ---------------------------------------------------------------------
 -- 2. 角色判斷
 -- ---------------------------------------------------------------------
@@ -127,6 +182,11 @@ drop policy if exists roles_delete on public.staff_roles;
 create policy roles_delete on public.staff_roles for delete
   using (public.my_role() = 'admin' and user_id <> auth.uid());
 
+alter table public.registration_private enable row level security;
+drop policy if exists regpriv_admin on public.registration_private;
+create policy regpriv_admin on public.registration_private for all
+  using (public.my_role() = 'admin') with check (public.my_role() = 'admin');
+
 drop policy if exists reg_read on public.registrations;
 create policy reg_read on public.registrations for select
   using (public.my_role() in ('viewer','checkin','admin'));
@@ -157,50 +217,68 @@ create trigger protect_self_role before update on public.staff_roles
 -- 4. 公開功能（未登入者可呼叫）
 -- ---------------------------------------------------------------------
 -- 線上報名
+drop function if exists public.register(text,text,text,text,text,boolean);
 create or replace function public.register(
-  p_name text, p_org text, p_title text, p_email text, p_phone text, p_consent boolean)
+  p_name text, p_org text, p_dept text, p_title text, p_phone text,
+  p_meal text, p_need_credit boolean, p_id_number text, p_consent boolean)
 returns table (code text, token uuid)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, extensions as $$
 #variable_conflict use_column
 declare
   cfg jsonb := (select data->'registration' from public.site_content where id = 1);
   cap int := nullif(cfg->>'capacity', '')::int;
+  v_phone text := trim(coalesce(p_phone, ''));
+  v_digits text := regexp_replace(coalesce(p_phone, ''), '[^0-9]', '', 'g');
+  v_id text := upper(trim(coalesce(p_id_number, '')));
   r public.registrations;
 begin
-  if coalesce((cfg->>'open')::boolean, false) is not true then
-    raise exception 'REG_CLOSED';
-  end if;
+  if coalesce((cfg->>'open')::boolean, false) is not true then raise exception 'REG_CLOSED'; end if;
   if p_consent is not true then raise exception 'NO_CONSENT'; end if;
-  if coalesce(trim(p_name), '') = '' or coalesce(trim(p_org), '') = '' or coalesce(trim(p_email), '') = '' then
+  if coalesce(trim(p_name), '') = '' or coalesce(trim(p_org), '') = '' or v_phone = '' or coalesce(p_meal, '') = '' then
     raise exception 'MISSING_FIELDS';
   end if;
-  if p_email !~* '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'BAD_EMAIL'; end if;
+  if p_meal not in ('meat','veg') then raise exception 'MISSING_FIELDS'; end if;
+  if length(v_digits) < 8 or length(v_digits) > 15 or v_phone !~ '^[0-9+()# -]+$' then raise exception 'BAD_PHONE'; end if;
+  if p_need_credit is true and not public.valid_tw_id(v_id) then raise exception 'BAD_ID'; end if;
   if cap is not null and (select count(*) from public.registrations where source in ('online','import','manual')) >= cap then
     raise exception 'REG_FULL';
   end if;
-  if exists (select 1 from public.registrations where lower(email) = lower(trim(p_email))) then
-    raise exception 'DUP_EMAIL';
+  if p_need_credit is true and exists (select 1 from public.registration_private
+       where id_hash = encode(digest(v_id, 'sha256'), 'hex')) then
+    raise exception 'DUP_ID';
   end if;
-  insert into public.registrations (name, org, title, email, phone, source, consent_at)
-  values (trim(p_name), trim(p_org), nullif(trim(p_title), ''), lower(trim(p_email)),
-          nullif(trim(p_phone), ''), 'online', now())
+  if exists (select 1 from public.registrations
+       where name = trim(p_name) and regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g') = v_digits) then
+    raise exception 'DUP_PHONE';
+  end if;
+  insert into public.registrations (name, org, dept, title, phone, meal, need_credit, source, consent_at)
+  values (trim(p_name), trim(p_org), nullif(trim(coalesce(p_dept, '')), ''), nullif(trim(coalesce(p_title, '')), ''),
+          v_phone, p_meal, coalesce(p_need_credit, false), 'online', now())
   returning * into r;
+  if p_need_credit is true then
+    insert into public.registration_private (registration_id, id_number, id_hash) values (r.id, v_id, '');
+  end if;
   return query select r.code, r.token;
 end $$;
 
--- 以電子郵件與姓名查詢報到證
-create or replace function public.find_ticket(p_email text, p_name text)
+-- 以姓名與聯絡電話查詢報到證
+drop function if exists public.find_ticket(text,text);
+create or replace function public.find_ticket(p_name text, p_phone text)
 returns uuid language sql security definer set search_path = public as $$
   select token from public.registrations
-  where lower(email) = lower(trim(p_email)) and name = trim(p_name)
+  where name = trim(p_name)
+    and regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g') = regexp_replace(coalesce(p_phone, ''), '[^0-9]', '', 'g')
+    and length(regexp_replace(coalesce(p_phone, ''), '[^0-9]', '', 'g')) >= 8
+  order by created_at
   limit 1
 $$;
 
 -- 顯示報到證（需持有個人專屬連結）
+drop function if exists public.get_ticket(uuid);
 create or replace function public.get_ticket(p_token uuid)
-returns table (code text, name text, org text, title text, category text, checked_in_at timestamptz)
+returns table (code text, name text, org text, dept text, title text, category text, meal text, need_credit boolean, checked_in_at timestamptz)
 language sql security definer set search_path = public as $$
-  select code, name, org, title, category, checked_in_at
+  select code, name, org, dept, title, category, meal, need_credit, checked_in_at
   from public.registrations where token = p_token
 $$;
 
@@ -236,13 +314,13 @@ begin
     return jsonb_build_object('status','notfound','code',upper(trim(p_code)));
   end if;
   if r.checked_in_at is not null then
-    return jsonb_build_object('status','dup','name',r.name,'org',r.org,'title',r.title,
-      'category',r.category,'code',r.code,'checked_in_at',r.checked_in_at);
+    return jsonb_build_object('status','dup','name',r.name,'org',r.org,'dept',r.dept,'title',r.title,
+      'category',r.category,'meal',r.meal,'code',r.code,'checked_in_at',r.checked_in_at);
   end if;
   update public.registrations set checked_in_at = now(), checked_in_by = auth.uid()
   where id = r.id returning * into r;
-  return jsonb_build_object('status','ok','name',r.name,'org',r.org,'title',r.title,
-    'category',r.category,'code',r.code,'checked_in_at',r.checked_in_at);
+  return jsonb_build_object('status','ok','name',r.name,'org',r.org,'dept',r.dept,'title',r.title,
+    'category',r.category,'meal',r.meal,'code',r.code,'checked_in_at',r.checked_in_at);
 end $$;
 
 create or replace function public.undo_check_in(p_code text)
@@ -253,39 +331,42 @@ begin
   where code = upper(trim(p_code));
 end $$;
 
-create or replace function public.walk_in(p_name text, p_org text, p_title text)
+drop function if exists public.walk_in(text,text,text);
+create or replace function public.walk_in(p_name text, p_org text, p_dept text, p_title text, p_meal text)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare r public.registrations;
 begin
   if public.my_role() not in ('checkin','admin') then raise exception 'NO_PERMISSION'; end if;
-  insert into public.registrations (name, org, title, source, checked_in_at, checked_in_by)
-  values (trim(p_name), trim(p_org), nullif(trim(p_title), ''), 'walkin', now(), auth.uid())
+  insert into public.registrations (name, org, dept, title, meal, source, checked_in_at, checked_in_by)
+  values (trim(p_name), trim(p_org), nullif(trim(coalesce(p_dept, '')), ''), nullif(trim(coalesce(p_title, '')), ''),
+          case when p_meal in ('meat','veg') then p_meal end, 'walkin', now(), auth.uid())
   returning * into r;
-  return jsonb_build_object('status','ok','name',r.name,'org',r.org,'title',r.title,
-    'category',r.category,'code',r.code,'checked_in_at',r.checked_in_at);
+  return jsonb_build_object('status','ok','name',r.name,'org',r.org,'dept',r.dept,'title',r.title,
+    'category',r.category,'meal',r.meal,'code',r.code,'checked_in_at',r.checked_in_at);
 end $$;
 
 -- ---------------------------------------------------------------------
 -- 6. 執行權限
 -- ---------------------------------------------------------------------
-revoke all on function public.register(text,text,text,text,text,boolean) from public;
+revoke all on function public.register(text,text,text,text,text,text,boolean,text,boolean) from public;
 revoke all on function public.find_ticket(text,text) from public;
 revoke all on function public.get_ticket(uuid) from public;
 revoke all on function public.registration_count() from public;
 revoke all on function public.public_site_content() from public;
 revoke all on function public.check_in(text) from public;
 revoke all on function public.undo_check_in(text) from public;
-revoke all on function public.walk_in(text,text,text) from public;
+revoke all on function public.walk_in(text,text,text,text,text) from public;
 revoke all on function public.gen_code() from public;
+revoke all on function public.registration_private_prepare() from public;
 
-grant execute on function public.register(text,text,text,text,text,boolean) to anon, authenticated;
+grant execute on function public.register(text,text,text,text,text,text,boolean,text,boolean) to anon, authenticated;
 grant execute on function public.find_ticket(text,text) to anon, authenticated;
 grant execute on function public.get_ticket(uuid) to anon, authenticated;
 grant execute on function public.registration_count() to anon, authenticated;
 grant execute on function public.public_site_content() to anon, authenticated;
 grant execute on function public.check_in(text) to authenticated;
 grant execute on function public.undo_check_in(text) to authenticated;
-grant execute on function public.walk_in(text,text,text) to authenticated;
+grant execute on function public.walk_in(text,text,text,text,text) to authenticated;
 grant execute on function public.gen_code() to authenticated;
 grant execute on function public.my_role() to authenticated;
 
@@ -342,8 +423,9 @@ begin
   if not public.sync_secret_ok(p_secret) then raise exception 'BAD_SYNC_SECRET'; end if;
   return coalesce((
     select jsonb_agg(jsonb_build_object(
-      'code', code, 'name', name, 'org', org, 'title', title, 'email', email, 'phone', phone,
-      'category', category, 'source', source, 'note', note,
+      'code', code, 'name', name, 'org', org, 'dept', dept, 'title', title, 'email', email, 'phone', phone,
+      'category', category, 'source', source, 'note', note, 'meal', meal,
+      'need_credit', need_credit, 'id_masked', id_masked,
       'created_at', created_at, 'consent_at', consent_at, 'checked_in_at', checked_in_at
     ) order by created_at)
     from public.registrations), '[]'::jsonb);
@@ -367,6 +449,20 @@ revoke all on function public.report_sync(text,int,text) from public;
 grant execute on function public.rotate_sync_secret() to authenticated;
 grant execute on function public.export_registrations(text) to anon, authenticated;
 grant execute on function public.report_sync(text,int,text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 9. 資料表存取授權
+--     Supabase 新專案不會自動開放新資料表給網頁存取，需明確授權；
+--     實際可讀寫的範圍仍由上方的資料列安全性（RLS）規則限制。
+--     未登入訪客（anon）不直接存取資料表，只能呼叫上方開放的函式。
+-- ---------------------------------------------------------------------
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on public.site_content  to authenticated;
+grant select, update, delete         on public.staff_roles   to authenticated;
+grant select, insert, update, delete on public.registrations to authenticated;
+grant select                         on public.sync_status   to authenticated;
+grant select, insert, update, delete on public.registration_private to authenticated;
+revoke all on public.site_content, public.staff_roles, public.registrations, public.sync_status, public.registration_private from anon;
 
 -- =====================================================================
 -- 首次設定：以自己的電子郵件在後台申請帳號後，執行下列指令成為管理者

@@ -15,5 +15,6 @@
 <body>
 <div id="app"><div class="gate"><p>系統連線中…</p></div></div>
 <script type="module" src="assets/js/admin.js"></script>
+<script>setTimeout(function(){var a=document.getElementById("app");if(a&&/系統連線中/.test(a.textContent))a.innerHTML='<div class="gate"><h2>系統元件載入失敗</h2><p>請確認網路連線，或所在網路是否封鎖 cdn.jsdelivr.net；也請確認 GitHub 上的 assets/js 檔案已完整上傳。</p></div>'},20000)</script>
 </body>
 </html>

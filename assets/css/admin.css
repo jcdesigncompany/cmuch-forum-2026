@@ -167,3 +167,7 @@ details.walk summary{cursor:pointer;font-weight:700;padding:4px 0}
 .hbars .v{text-align:right;font-size:14px}
 .hbars li:hover .k{color:var(--blue)}
 @media (max-width:560px){.kpis{grid-template-columns:1fr 1fr;gap:10px}.kpi{padding:12px 14px}.kpi dd{font-size:28px}.chart .ax{font-size:16px}}
+.mealtag{display:inline-block;margin-top:10px;border-radius:8px;padding:4px 12px;font-weight:700;font-size:15px;background:var(--sky);color:var(--ink)}
+.mealtag.veg{background:#DDF5E4;color:#0B6B36}
+.mealtag.sm{margin:0;padding:1px 8px;font-size:13px}
+@media (prefers-color-scheme:dark){.mealtag.veg{background:#113A2A;color:#7BE0A6}}

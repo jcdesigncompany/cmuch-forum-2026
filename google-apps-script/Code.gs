@@ -18,13 +18,19 @@ const AUTO_MINUTES = 5;
 
 const CAT = { vip: '貴賓', speaker: '講者／座長', general: '一般', staff: '工作人員' };
 const SRC = { online: '線上報名', import: '名單匯入', walkin: '現場登記', manual: '人工建檔' };
+const MEAL = { meat: '葷食', veg: '素食' };
+// 身分證字號只同步遮罩（例：A12****789）；完整號碼請由管理後台下載「積分申請名單」
 const COLUMNS = [
   ['報到代碼', r => r.code],
   ['姓名', r => r.name],
-  ['服務單位', r => r.org],
+  ['服務機構', r => r.org],
+  ['單位', r => r.dept || ''],
   ['職稱', r => r.title || ''],
-  ['電子郵件', r => r.email || ''],
   ['聯絡電話', r => r.phone ? "'" + r.phone : ''],
+  ['用餐', r => MEAL[r.meal] || ''],
+  ['申請積分', r => r.need_credit ? '是' : '否'],
+  ['身分證字號（遮罩）', r => r.id_masked || ''],
+  ['電子郵件', r => r.email || ''],
   ['類別', r => CAT[r.category] || '一般'],
   ['來源', r => SRC[r.source] || r.source],
   ['報名時間', r => toDate(r.created_at)],
@@ -115,7 +121,7 @@ function writeData(ss, rows) {
   sh.getRange(1, 1, values.length, COLUMNS.length).setValues(values);
   sh.setFrozenRows(1);
   sh.getRange(1, 1, 1, COLUMNS.length).setFontWeight('bold').setBackground('#13205A').setFontColor('#FFFFFF');
-  [9, 10, 12].forEach(c => sh.getRange(2, c, Math.max(rows.length, 1), 1).setNumberFormat('yyyy/mm/dd hh:mm'));
+  COLUMNS.forEach((c, i) => { if (/時間$/.test(c[0])) sh.getRange(2, i + 1, Math.max(rows.length, 1), 1).setNumberFormat('yyyy/mm/dd hh:mm'); });
   sh.getRange(1, 1, values.length, COLUMNS.length).createFilter();
   if (rows.length) sh.autoResizeColumns(1, COLUMNS.length);
   sh.getRange(1, COLUMNS.length + 2).setValue('此工作表每次同步都會整張覆寫，請勿在此編輯；如需註記請另開工作表。').setFontColor('#B25E00');
@@ -139,6 +145,14 @@ function writeStats(ss, rows) {
   push('今日新增', rows.filter(r => r.source === 'online' && dayOf(r) === today).length, today);
   push('已報到', checked, pre.length ? Math.round(checked / pre.length * 1000) / 10 + '%' : '');
   push('現場登記', rows.filter(r => r.source === 'walkin').length);
+  push('申請繼續教育積分', pre.filter(r => r.need_credit).length);
+  push('');
+  push('用餐（含現場登記）', '報名', '已報到');
+  [['meat', '葷食'], ['veg', '素食']].forEach(([k, n]) => {
+    const x = rows.filter(r => r.meal === k);
+    push(n, x.length, x.filter(r => r.checked_in_at).length);
+  });
+  push('未填', rows.filter(r => !r.meal).length, rows.filter(r => !r.meal && r.checked_in_at).length);
   push('');
   push('依類別', '報名', '已報到');
   Object.keys(CAT).forEach(k => {
@@ -146,7 +160,7 @@ function writeStats(ss, rows) {
     push(CAT[k], x.length, x.filter(r => r.checked_in_at).length);
   });
   push('');
-  push('依服務單位（前 15）', '人數');
+  push('依服務機構（前 15）', '人數');
   countBy(pre, r => r.org).slice(0, 15).forEach(([k, v]) => push(k, v));
   push('');
   push('每日報名人數', '當日', '累計');
@@ -154,7 +168,7 @@ function writeStats(ss, rows) {
   countBy(pre, dayOf).sort((a, b) => a[0] < b[0] ? -1 : 1).forEach(([k, v]) => { cum += v; push(k, v, cum); });
 
   sh.getRange(1, 1, out.length, 3).setValues(out);
-  out.forEach((r, i) => { if (['總覽', '依類別', '依服務單位（前 15）', '每日報名人數'].indexOf(r[0]) > -1) sh.getRange(i + 1, 1, 1, 3).setFontWeight('bold').setBackground('#EAF2FF'); });
+  out.forEach((r, i) => { if (['總覽', '用餐（含現場登記）', '依類別', '依服務機構（前 15）', '每日報名人數'].indexOf(r[0]) > -1) sh.getRange(i + 1, 1, 1, 3).setFontWeight('bold').setBackground('#EAF2FF'); });
   sh.setColumnWidth(1, 260); sh.setColumnWidths(2, 2, 110);
 }
 
