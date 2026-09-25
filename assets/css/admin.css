@@ -174,3 +174,7 @@ details.walk summary{cursor:pointer;font-weight:700;padding:4px 0}
 .top .acct.out{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.45);color:#fff;font-weight:700}
 .top .acct.out:hover{background:rgba(255,255,255,.22)}
 .top .acct{cursor:pointer}
+.tbl input.dname{width:100%;min-width:120px;max-width:220px;border:1.5px solid transparent;border-radius:6px;padding:4px 8px;font-weight:700;font-size:15px;background:transparent}
+.tbl input.dname:hover{border-color:var(--line)}
+.tbl input.dname:focus{border-color:var(--blue);background:var(--surface);outline:none}
+.tbl input.dname::placeholder{color:var(--amber);font-weight:500}
