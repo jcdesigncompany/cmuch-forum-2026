@@ -106,11 +106,11 @@ function render() {
     app.innerHTML = `<div class="gate"><h2>帳號待核定</h2><p>您的帳號（${esc(st.session.user.email)}）已建立，請聯絡活動管理者核定權限後重新整理此頁。</p><button class="btn" data-act="logout">登出</button></div>`;
     return;
   }
-  const tabs = tabsFor(); if (!tabs.some(t => t[0] === st.tab)) st.tab = tabs[0][0];
+  const tabs = tabsFor(); if (st.tab !== "account" && !tabs.some(t => t[0] === st.tab)) st.tab = tabs[0][0];
   const c = counts(), ae = document.activeElement, keep = ae && ae.id, pos = ae && ae.selectionStart;
   const evName = st.C ? st.C.info.line1 + st.C.info.line2 : "兒童醫院永續發展論壇";
   app.innerHTML = `<header class="top"><div class="in"><h1>${esc(evName)}<small>管理後台｜<a class="lk" href="index.html" target="_blank" rel="noopener">檢視活動網站</a></small></h1>
-    <span class="tally">已報到 <b>${c.inn}</b> / ${c.total}${c.walk ? `　現場登記 ${c.walk}` : ""}</span><span class="role">${ROLE_NAME[st.role]}</span><button class="acct" data-act="account">${esc(st.myName || "帳號")}</button></div></header>
+    <span class="tally">已報到 <b>${c.inn}</b> / ${c.total}${c.walk ? `　現場登記 ${c.walk}` : ""}</span><span class="role">${ROLE_NAME[st.role]}</span><button class="acct" data-act="account" title="變更密碼">${esc(st.myName || "我的帳號")}</button><button class="acct out" data-act="logout">登出</button></div></header>
     <nav class="tabs"><div class="in" role="tablist">${tabs.map(t => `<button role="tab" data-tab="${t[0]}" aria-selected="${st.tab === t[0]}">${t[1]}</button>`).join("")}</div></nav>
     <main>${({ scan: scanView, list: listView, stats: statsView, overview: overviewView, content: contentView, import: importView, staff: staffView, account: accountView })[st.tab](c)}</main>`;
   if (st.tab === "scan" && st.cam) { const v = $("#camv"); if (v) { v.srcObject = st.cam.stream; v.play().catch(() => {}); } }
@@ -549,7 +549,15 @@ document.addEventListener("click", async e => {
   else if (a === "copysecret") { const i = $("#secretval"); i.select(); try { await navigator.clipboard.writeText(i.value); toast("已複製同步金鑰"); } catch { toast("請手動選取後複製"); } }
   else if (a === "noplan") { st.C.way.plan = ""; markDirty(); redrawEditor(); }
   else if (a === "account") { st.tab = "account"; render(); }
-  else if (a === "logout") { if (st.cDirty && !confirm("網站內容有尚未儲存的修改，確定登出？")) return; await sb.auth.signOut(); }
+  else if (a === "logout") {
+    if (st.cDirty && !confirm("網站內容有尚未儲存的修改，確定登出？")) return;
+    if (!st.cDirty && !confirm("確定要登出管理後台？")) return;
+    st.cDirty = false; if (st.cam) camOff();
+    const { error } = await sb.auth.signOut();
+    if (error) { await sb.auth.signOut({ scope: "local" }); }
+    Object.assign(st, { session: null, me: null, role: "none", regs: [], staff: [], C: null, tab: "scan", booted: false, last: null, newSecret: null, authMode: "login", authMsg: { ok: true, t: "已登出。" } });
+    renderAuth();
+  }
 });
 document.addEventListener("submit", async e => {
   e.preventDefault(); const f = e.target;
