@@ -1,5 +1,5 @@
 {
- "agendaVersion": 2026092501,
+ "agendaVersion": 2026092502,
  "info": {
   "line1": "健康台灣深耕計畫",
   "line2": "兒童醫院永續發展論壇",
@@ -323,7 +323,7 @@
    "org": "中國醫藥大學兒童醫院",
    "status": "confirmed",
    "bio": "現職：中國醫藥大學兒童醫院院長（2021年8月起）、中國醫藥大學講座教授、兒童過敏免疫風濕科主治醫師\n學歷：英國牛津大學生化免疫學博士\n經歷：成大醫院服務33年，曾任成功大學特聘教授；國際過敏組織（WAO）教育委員會委員、WAO Journal 及 Asia Pacific Allergy 期刊主編\n榮譽：十大傑出青年醫學研究獎、李國鼎科技與人文講座金質獎章；發表 SCI 論文逾160篇",
-   "photo": ""
+   "photo": "assets/img/speakers/wang_zy.jpg"
   },
   {
    "id": "li_wz",
