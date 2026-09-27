@@ -469,4 +469,4 @@ revoke all on public.site_content, public.staff_roles, public.registrations, pub
 --   update public.staff_roles set role = 'admin' where email = '您的電子郵件';
 -- =====================================================================
 
--- 訪客瀏覽次數：見 supabase/page_views.sql（新專案可接著執行該檔）
+-- 網頁瀏覽次數：見 supabase/page_views.sql（新專案可接著執行該檔）
