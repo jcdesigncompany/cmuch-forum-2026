@@ -468,3 +468,5 @@ revoke all on public.site_content, public.staff_roles, public.registrations, pub
 -- 首次設定：以自己的電子郵件在後台申請帳號後，執行下列指令成為管理者
 --   update public.staff_roles set role = 'admin' where email = '您的電子郵件';
 -- =====================================================================
+
+-- 訪客瀏覽次數：見 supabase/page_views.sql（新專案可接著執行該檔）
