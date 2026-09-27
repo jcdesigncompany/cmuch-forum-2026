@@ -9,6 +9,7 @@ var KV="assets/img/kv.jpg";
 var LOGO="assets/img/logo.png";
 var LOGO_FULL="assets/img/logo-full.png";
 var A={can:false,preview:false};
+var VIEWS=0;
 var UI={track:"all",q:"",mode:0,step:0};
 var TRACKS={opening:"開幕",policy:"國家政策與藍圖",practice:"兒童醫院深耕實踐",panel:"綜合座談",logistics:"報到與休息"};
 var WD="日一二三四五六";
@@ -173,8 +174,19 @@ function pageHTML(){
   return '<header class="topbar"><div class="wrap"><a class="staff-top" href="admin.html" rel="nofollow" title="工作人員登入" aria-label="工作人員登入"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></a><a class="brand" href="#home"><img src="'+LOGO+'" alt=""><span>'+esc(I.organizer)+' <em>'+dInfo().y+'年'+esc(I.line2)+'</em></span></a><nav class="topnav" aria-label="主要導覽">'+NAV.slice(1).map(function(n){return '<a href="#'+n[0]+'">'+n[1]+'</a>'}).join("")+'<a href="#info">聯絡</a>'+(regOpen()?'<a href="register.html" class="reg">報名</a>':'<a href="ticket.html">報到證</a>')+'</nav></div></header>'+
   (I.noticeOn&&I.notice?'<div class="notice" role="status"><div class="wrap">'+IC.bell+'<span>'+esc(I.notice)+'</span></div></div>':'')+
   '<main>'+heroHTML()+agendaHTML()+speakersHTML()+travelHTML()+wayHTML()+infoHTML()+'</main>'+
-  '<footer><div class="wrap"><div class="fbrand"><span class="plate sm"><img src="'+LOGO_FULL+'" alt="'+esc(I.organizer)+'" width="1400" height="182"></span><div>'+esc(I.line1+I.line2)+'<br>'+esc(I.funding)+'</div></div><div class="num">'+esc(dateZh())+'　'+esc(I.venue)+'</div><a class="staff" href="admin.html" rel="nofollow">工作人員登入</a></div></footer>'+
+  '<footer><div class="wrap"><div class="fbrand"><span class="plate sm"><img src="'+LOGO_FULL+'" alt="'+esc(I.organizer)+'" width="1400" height="182"></span><div>'+esc(I.line1+I.line2)+'<br>'+esc(I.funding)+'</div></div><div class="num">'+esc(dateZh())+'　'+esc(I.venue)+'</div>'+(VIEWS?'<div class="visits">訪客瀏覽次數 <b class="num">'+VIEWS.toLocaleString("zh-TW")+'</b></div>':'')+'<a class="staff" href="admin.html" rel="nofollow">工作人員登入</a></div></footer>'+
   '<nav class="bnav" aria-label="快速導覽"><div class="in">'+NAV.map(function(n){return '<a href="#'+n[0]+'" data-nav="'+n[0]+'">'+n[2]+'<span>'+n[1]+'</span></a>'}).join("")+'</div></nav>'
+}
+
+/* ---------- visit counter ---------- */
+// 同一分頁工作階段只計一次；資料庫尚未建立計數功能時不顯示
+async function loadViews(){
+  if(!sb)return;
+  var seen=false;try{seen=sessionStorage.getItem("cmuch_seen")==="1"}catch(_){}
+  try{
+    var r=await sb.rpc(seen?"page_view_count":"page_view_hit");
+    if(!r.error&&r.data!=null){VIEWS=Number(r.data)||0;try{sessionStorage.setItem("cmuch_seen","1")}catch(_){}if(VIEWS)render()}
+  }catch(_){}
 }
 
 /* ---------- render ---------- */
@@ -220,6 +232,6 @@ setInterval(function(){var l=$("#live");if(l)l.innerHTML=liveHTML();if(liveState
 /* ---------- boot ---------- */
 try{var got=await loadContent();S=got.S}catch(e){root.innerHTML='<div style="padding:60px 20px;text-align:center">網站內容載入失敗，請重新整理頁面。</div>';return}
 if(!S.way)S.way={steps:[],facilities:[]};if(!S.travel)S.travel=[];
-render();
+render();loadViews();
 if(location.hash){var tg=document.getElementById(location.hash.slice(1));if(tg)tg.scrollIntoView()}
 })();
