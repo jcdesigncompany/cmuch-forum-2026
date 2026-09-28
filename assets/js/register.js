@@ -21,7 +21,8 @@ function formView(msg) {
     <label class="f"><span>職稱</span><input name="title" autocomplete="organization-title" maxlength="60" placeholder="例：主治醫師"></label></div>
     <div class="two"><label class="f"><span>服務機構<em>*</em></span><input name="org" autocomplete="organization" required maxlength="120" placeholder="例：中國醫藥大學兒童醫院"></label>
     <label class="f"><span>單位</span><input name="dept" maxlength="120" placeholder="例：小兒科、護理部"></label></div>
-    <label class="f"><span>聯絡電話<em>*</em></span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" placeholder="例：0912-345-678"><small>用於活動聯繫，以及查詢報到證</small></label>
+    <div class="two"><label class="f"><span>聯絡電話<em>*</em></span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" placeholder="例：0912-345-678"><small>用於活動聯繫，以及查詢報到證</small></label>
+    <label class="f"><span>電子郵件<em>*</em></span><input name="email" type="email" inputmode="email" autocomplete="email" required maxlength="120" spellcheck="false" autocapitalize="off" placeholder="例：name@example.com"><small>用於寄送活動通知</small></label></div>
     <fieldset class="f choice"><legend>用餐習慣<em>*</em></legend>
       <label><input type="radio" name="meal" value="meat" required> 葷食</label>
       <label><input type="radio" name="meal" value="veg"> 素食</label>
@@ -53,16 +54,20 @@ app.addEventListener("submit", async (e) => {
   if (f.id === "reg") {
     const d = Object.fromEntries(new FormData(f));
     const credit = d.credit === "yes", idno = String(d.idno || "").trim().toUpperCase();
-    if (!d.name?.trim() || !d.org?.trim() || !d.phone?.trim()) return showErr(f, "請填寫姓名、服務機構與聯絡電話。");
+    const email = String(d.email || "").trim().toLowerCase();
+    if (!d.name?.trim() || !d.org?.trim() || !d.phone?.trim() || !email) return showErr(f, "請填寫姓名、服務機構、聯絡電話與電子郵件。");
     if (phoneDigits(d.phone).length < 8 || phoneDigits(d.phone).length > 15) return showErr(f, "聯絡電話格式不正確，請填寫 8 至 15 位數字。");
+    if (email.length > 120 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr(f, "電子郵件格式不正確，請再確認一次。");
     if (!d.meal) return showErr(f, "請選擇用餐習慣。");
     if (!d.credit) return showErr(f, "請選擇是否申請繼續教育積分。");
     if (credit && !validTwId(idno)) return showErr(f, "身分證字號格式不正確，請再確認一次。");
     if (!f.consent.checked) return showErr(f, "請勾選同意個人資料蒐集告知事項。");
     btn.disabled = true; btn.textContent = "送出中…";
-    const { data, error } = await sb.rpc("register", {
-      p_name: d.name, p_org: d.org, p_dept: d.dept || "", p_title: d.title || "", p_phone: d.phone,
-      p_meal: d.meal, p_need_credit: credit, p_id_number: credit ? idno : "", p_consent: true });
+    const args = { p_name: d.name, p_org: d.org, p_dept: d.dept || "", p_title: d.title || "", p_phone: d.phone,
+      p_meal: d.meal, p_need_credit: credit, p_id_number: credit ? idno : "", p_consent: true };
+    let { data, error } = await sb.rpc("register", { ...args, p_email: email });
+    // 資料庫尚未更新為含電子郵件的報名函式時，改用舊版函式，避免無法報名
+    if (error && (error.code === "PGRST202" || /function .*register/i.test(error.message || ""))) ({ data, error } = await sb.rpc("register", args));
     if (error || !data || !data[0]) { btn.disabled = false; btn.textContent = "送出報名"; return showErr(f, errMsg(error)); }
     location.href = "ticket.html?t=" + encodeURIComponent(data[0].token) + "&new=1";
   }

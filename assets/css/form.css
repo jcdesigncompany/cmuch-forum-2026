@@ -41,3 +41,4 @@
 .choice label:has(input:checked){border-color:var(--blue);background:var(--sky)}
 .choice input{width:18px;height:18px;margin:0}
 .f input:not([type=radio]):not([type=checkbox]){width:100%}
+[hidden]{display:none!important}
