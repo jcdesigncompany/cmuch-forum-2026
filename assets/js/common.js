@@ -147,7 +147,7 @@ export const phoneDigits = p => String(p || "").replace(/\D/g, "");
 export function errMsg(e) {
   const m = (e && (e.message || e.error_description)) || "";
   const map = {
-    REG_CLOSED: "目前未開放報名。", NO_CONSENT: "請勾選同意個人資料蒐集告知事項。", MISSING_FIELDS: "請填寫所有必填欄位（姓名、服務機構、聯絡電話、用餐習慣）。",
+    REG_CLOSED: "目前未開放報名。", NO_CONSENT: "請勾選同意個人資料蒐集告知事項。", MISSING_FIELDS: "請填寫所有必填欄位（姓名、服務機構、聯絡電話、電子郵件、用餐習慣）。",
     BAD_EMAIL: "電子郵件格式不正確。", REG_FULL: "報名人數已額滿，感謝您的關注。", DUP_EMAIL: "此電子郵件已完成報名，請使用「查詢報到證」。",
     BAD_PHONE: "聯絡電話格式不正確，請填寫 8 至 15 位數字。", BAD_ID: "身分證字號格式不正確，請再確認一次。",
     DUP_ID: "此身分證字號已完成報名，請使用「查詢報到證」。", DUP_PHONE: "此姓名與電話已完成報名，請使用「查詢報到證」。",
