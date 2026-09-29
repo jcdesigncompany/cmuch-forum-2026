@@ -15,7 +15,7 @@
 const SHEET_DATA = '報名資料';
 const SHEET_STATS = '統計摘要';
 const SHEET_LOG = '同步紀錄';
-const SCRIPT_VERSION = '2026-09-30 v7（高鐵接駁：1F 7號出口載客區）';
+const SCRIPT_VERSION = '2026-09-30 v8（交通方式：自行開車／搭乘高鐵）';
 const TZ = 'Asia/Taipei';
 const AUTO_MINUTES = 5;
 const DEFAULT_SITE_URL = 'https://jcdesigncompany.github.io/cmuch-forum-2026/';
@@ -191,7 +191,6 @@ function writeStats(ss, rows) {
   push('自行開車（停車優免）', pre.filter(r => r.transport === 'car').length);
   const hsr = pre.filter(r => r.transport === 'hsr');
   push('搭乘高鐵', hsr.length, countBy(hsr, r => r.hsr_from).map(x => x[0] + ' ' + x[1]).join('、'));
-  push('其他', pre.filter(r => r.transport === 'other').length);
   push('未填', pre.filter(r => !r.transport).length);
   Object.keys(ARRIVE).forEach(k => push('　接駁去程：' + ARRIVE[k] + ' 抵達', hsr.filter(r => r.shuttle_to && r.hsr_arrive === k).length));
   push('　接駁回程', hsr.filter(r => r.shuttle_back).length);
