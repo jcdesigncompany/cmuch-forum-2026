@@ -16,20 +16,22 @@ const THSR_TIMETABLE = "https://www.thsrc.com.tw/ArticleContent/a3b630bb-1066-43
 const toMin = t => { const p = String(t || "0:0").split(":").map(Number); return p[0] * 60 + (p[1] || 0); };
 const hm = m => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(((m % 60) + 60) % 60).padStart(2, "0");
 const floor10 = m => Math.floor(m / 10) * 10;
+const SHUTTLE_MIN = 40;   // 高鐵台中站出站後搭乘本院接駁車至會場約 40 分鐘
+const BUFFER_MIN = 10;    // 出站、候車與上車緩衝
 function hsrPlan(station) {
   const row = HSR.find(x => x[0] === station); if (!row) return null;
   const [, fast, slow] = row;
-  const arriveBy = toMin(I.checkin || "12:30") - 40;              // 預留接駁與報到時間
+  const arriveBy = toMin(I.checkin || "12:30") - SHUTTLE_MIN - BUFFER_MIN;   // 報到開放前抵達會場
   const latest = floor10(arriveBy - slow), earliest = latest - 30;
-  const backFrom = toMin(I.end || "17:30") + 50;                  // 會後接駁抵達高鐵台中站後
+  const backFrom = toMin(I.end || "17:30") + BUFFER_MIN + SHUTTLE_MIN + BUFFER_MIN;  // 會後搭接駁回高鐵台中站，再預留進站時間
   return { station, fast, slow, arriveBy: hm(arriveBy), go: hm(earliest) + "–" + hm(latest), back: hm(backFrom), backArrive: hm(backFrom + fast) + "–" + hm(backFrom + slow + 20) };
 }
 function hsrTip(station) {
   const p = hsrPlan(station); if (!p) return "";
   const day = dateZh(S), copy = `${day} 高鐵行程\n去程：${p.station}→台中，建議 ${p.go} 出發（${p.arriveBy} 前抵達台中站）\n回程：台中→${p.station}，建議搭乘 ${p.back} 以後的班次`;
   return `<div class="hsr-tip"><b>建議搭乘時間（${esc(p.station)}站 ⇄ 台中站，車程約 ${p.fast}–${p.slow} 分鐘）</b>
-    <ul><li><span>去程</span><div>搭乘 <b class="num">${p.go}</b> 自${esc(p.station)}站出發的班次，約 <b class="num">${p.arriveBy}</b> 前抵達高鐵台中站</div></li>
-    <li><span>回程</span><div>活動 ${esc(I.end || "17:30")} 結束，建議搭乘 <b class="num">${p.back}</b> 以後自台中站出發的班次，約 ${p.backArrive} 抵達${esc(p.station)}站</div></li></ul>
+    <ul><li><span>去程</span><div>搭乘 <b class="num">${p.go}</b> 自${esc(p.station)}站出發的班次，約 <b class="num">${p.arriveBy}</b> 前抵達高鐵台中站（出站後搭乘接駁車約 ${SHUTTLE_MIN} 分鐘抵達會場）</div></li>
+    <li><span>回程</span><div>活動 ${esc(I.end || "17:30")} 結束後搭乘接駁車回高鐵台中站（約 ${SHUTTLE_MIN} 分鐘），建議搭乘 <b class="num">${p.back}</b> 以後自台中站出發的班次，約 ${p.backArrive} 抵達${esc(p.station)}站</div></li></ul>
     <div class="acts"><a class="btn btn-blue" href="${THSR_BOOK}" target="_blank" rel="noopener">前往高鐵官網訂票</a><a class="btn btn-line" href="${THSR_TIMETABLE}" target="_blank" rel="noopener">查詢時刻表</a><button type="button" class="btn btn-line" data-copytrip="${esc(copy)}">複製行程資訊</button></div>
     <small>依一般行車時間推算，僅供參考；實際班次與票價以台灣高鐵公告為準。高鐵官網不提供自動帶入車站與日期，請依上方資訊於官網或 T-EX App 選擇車次。</small></div>`;
 }
@@ -47,7 +49,7 @@ function transportView() {
         <label><input type="checkbox" name="shuttle_to" checked> 去程搭乘（高鐵台中站 → 會場）</label>
         <label><input type="checkbox" name="shuttle_back" checked> 回程搭乘（會場 → 高鐵台中站）</label>
       </fieldset>
-      <label class="f" id="arrivebox"><span>預計抵達高鐵台中站時間<em>*</em></span><select name="hsr_arrive"><option value="">請選擇</option>${ARRIVE.map(x => `<option value="${x[0]}">${x[1]}</option>`).join("")}</select><small>供規劃接駁車班次；接駁時間與上車地點將於活動前另行通知。</small></label>
+      <label class="f" id="arrivebox"><span>預計抵達高鐵台中站時間<em>*</em></span><select name="hsr_arrive"><option value="">請選擇</option>${ARRIVE.map(x => `<option value="${x[0]}">${x[1]}</option>`).join("")}</select><small>高鐵台中站出站後搭乘本院接駁車至會場約 ${SHUTTLE_MIN} 分鐘；本欄供規劃接駁車班次，接駁時間與上車地點將於活動前另行通知。</small></label>
     </div>`;
 }
 
