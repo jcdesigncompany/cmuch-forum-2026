@@ -33,7 +33,7 @@ function calUrl(){
   return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(S.info.line1+S.info.line2)+"&dates="+z(S.info.start)+"/"+z(S.info.end)+"&location="+encodeURIComponent(S.info.venue+" "+S.info.address)+"&details="+encodeURIComponent(S.info.subtitle)
 }
 function regOpen(){return !!(S.registration&&S.registration.open)}
-function roleLabel(s){return s.track==="panel"?"與談人":"講者"}
+function roleLabel(s){return s.speakerRole||(s.track==="panel"?"與談人":"講者")}
 function rolesOf(id){var r=[];sorted().forEach(function(s){if((s.speakers||[]).indexOf(id)>-1)r.push({s:s,role:roleLabel(s)});if((s.moderators||[]).indexOf(id)>-1)r.push({s:s,role:"座長"})});return r}
 function toast(msg){var t=document.createElement("div");t.className="toast";t.setAttribute("role","status");t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},2600)}
 
@@ -135,7 +135,7 @@ function speakersHTML(){
   var rows=sorted().filter(function(s){return (s.track==="policy"||s.track==="practice")&&((s.speakers||[]).length||(s.moderators||[]).length)}).map(function(s){
     var T=splitTitle(s.title);
     return '<li class="pair t-'+s.track+'"><div class="ph"><span class="num">'+esc(s.start)+'–'+esc(s.end)+'</span><span class="tag">'+esc(TRACKS[s.track])+'</span><h3>'+esc(T.main)+'</h3></div>'+
-    '<div class="pp">'+(s.speakers||[]).map(function(id){return mini(id,"講者")}).join("")+(s.moderators||[]).map(function(id){return mini(id,"座長")}).join("")+'</div></li>'}).join("");
+    '<div class="pp">'+(s.speakers||[]).map(function(id){return mini(id,roleLabel(s))}).join("")+(s.moderators||[]).map(function(id){return mini(id,"座長")}).join("")+'</div></li>'}).join("");
   var panel=sorted().filter(function(s){return s.track==="panel"&&(s.speakers||[]).length})[0],ph="";
   if(panel){var T=splitTitle(panel.title);
     ph='<li class="pair t-panel"><div class="ph"><span class="num">'+esc(panel.start)+'–'+esc(panel.end)+'</span><span class="tag">'+esc(T.lab||TRACKS.panel)+'</span><h3>'+esc(T.main)+'</h3></div>'+

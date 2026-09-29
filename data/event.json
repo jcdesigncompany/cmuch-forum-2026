@@ -1,5 +1,5 @@
 {
- "agendaVersion": 2026092519,
+ "agendaVersion": 2026092901,
  "info": {
   "line1": "健康台灣深耕計畫",
   "line2": "兒童醫院永續發展論壇",
@@ -178,7 +178,7 @@
    "start": "16:10",
    "end": "16:30",
    "track": "practice",
-   "title": "兒童醫療創新與人才培育：從醫療品質走向永續發展",
+   "title": "兒童醫療創新與人才培育：兒童急重症公費醫師培育的政策建言",
    "speakerText": "",
    "speakers": [
     "cai_yj"
@@ -187,7 +187,8 @@
     "song_wj"
    ],
    "note": "",
-   "moderatorText": ""
+   "moderatorText": "",
+   "speakerRole": "專題講者"
   },
   {
    "id": "s12",
@@ -220,7 +221,6 @@
     "wang_zy",
     "li_wz",
     "chen_zp",
-    "cai_yj",
     "yang_jr"
    ],
    "moderators": [],
@@ -357,7 +357,7 @@
    "name": "蔡易晉",
    "title": "院長",
    "org": "彰化基督教兒童醫院",
-   "status": "invited",
+   "status": "confirmed",
    "bio": "【現職】\n彰化基督教兒童醫院院長\n\n【學歷】\n國立陽明大學臨床醫學研究所醫學博士\n國防醫學院醫學系\n\n【經歷】\n三軍總醫院小兒科主治醫師\n三軍總醫院風溼免疫科臨床研究醫師\n中山醫學大學醫學系部定副教授\n高雄醫學大學醫學系兼任副教授\n輔仁大學醫學系臨床助理教授\n國防醫學院小兒學系臨床講師",
    "photo": "assets/img/speakers/cai_yj.jpg"
   },

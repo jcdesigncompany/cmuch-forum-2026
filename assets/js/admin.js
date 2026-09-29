@@ -327,7 +327,7 @@ function secBody() {
       const picks = key => `<div class="picks">${C.people.map(p => `<label><input type="checkbox" data-list="${b}.${key}" value="${esc(p.id)}"${(x[key] || []).includes(p.id) ? " checked" : ""}>${esc(p.name)}</label>`).join("")}</div>`;
       return `<details class="item"><summary><small>${esc(x.start)}</small><b>${esc(x.title || "（未命名場次）")}</b></summary><div class="in">
       <div class="three">${fld("開始", b + ".start", "time")}${fld("結束", b + ".end", "time")}${sel("類型", b + ".track", Object.entries(TRACKS))}</div>
-      ${fld("講題／議程名稱", b + ".title", "textarea")}${fld("講者文字（無特定人選時使用）", b + ".speakerText")}${fld("座長／主持人文字（無特定人選時使用）", b + ".moderatorText")}
+      ${fld("講題／議程名稱", b + ".title", "textarea")}${fld("講者稱謂（選填，例如：專題講者；空白則顯示「講者」）", b + ".speakerRole")}${fld("講者文字（無特定人選時使用）", b + ".speakerText")}${fld("座長／主持人文字（無特定人選時使用）", b + ".moderatorText")}
       <span class="hint" style="display:block;margin-bottom:4px">${roleLabel(x)}</span>${picks("speakers")}<span class="hint" style="display:block;margin-bottom:4px">${x.track === "panel" ? "主持人" : "座長"}</span>${picks("moderators")}
       ${fld("備註（對外顯示）", b + ".note")}<div class="row-acts"><button class="sbtn danger" data-cdel="sessions" data-i="${i}">刪除此場次</button></div></div></details>`; }).join("") +
       `<button class="sbtn pri" data-cadd="sessions">新增場次</button>`;
