@@ -66,7 +66,6 @@ function transportView() {
   return `<fieldset class="f choice"><legend>交通方式<em>*</em></legend>
       <label><input type="radio" name="transport" value="car" required> 自行開車（提供停車優免）</label>
       <label><input type="radio" name="transport" value="hsr"> 搭乘高鐵（高鐵台中站免費接駁至會場）</label>
-      <label><input type="radio" name="transport" value="other"> 其他（公車、計程車、共乘等）</label>
     </fieldset>
     <div id="tr-car" hidden><label class="f"><span>車牌號碼<em>*</em></span><input name="plate" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例：ABC-1234"><small>用於辦理停車優免；優免方式與停車地點將於活動前另行通知。</small></label></div>
     <div id="tr-hsr" hidden>
