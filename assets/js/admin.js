@@ -118,6 +118,14 @@ function render() {
   else if (st.tab === "scan" && !st.cam) { const ci = $("#code"); if (ci) ci.focus(); }
 }
 const catTag = k => `<span class="cat ${esc(k)}">${esc(CAT[k] || "一般")}</span>`;
+const TR = { car: "自行開車", hsr: "搭乘高鐵", other: "其他" };
+const ARR = { before11: "11:00 以前", "1100-1130": "11:00–11:30", "1130-1200": "11:30–12:00", after12: "12:00 以後" };
+const shuttleText = r => [r.shuttle_to ? "去程" : "", r.shuttle_back ? "回程" : ""].filter(Boolean).join("、");
+function trText(r) {
+  if (r.transport === "car") return "自行開車" + (r.car_plate ? `（${r.car_plate}）` : "");
+  if (r.transport === "hsr") return "高鐵 " + (r.hsr_from || "") + (shuttleText(r) ? `｜接駁 ${shuttleText(r)}` : "｜不搭接駁") + (r.hsr_arrive ? `｜${ARR[r.hsr_arrive] || ""} 抵達` : "");
+  return r.transport === "other" ? "其他" : "";
+}
 
 /* =================== 報到 =================== */
 function resultHTML() {
@@ -196,21 +204,23 @@ function listRows() {
     if (st.filter === "walk" && r.source !== "walkin") return false;
     if (st.filter === "veg" && r.meal !== "veg") return false;
     if (st.filter === "credit" && !r.need_credit) return false;
-    return !q || (r.name + r.org + (r.dept || "") + (r.title || "") + r.code + (r.email || "") + (r.phone || "")).toLowerCase().includes(q);
+    if (st.filter === "car" && r.transport !== "car") return false;
+    if (st.filter === "hsr" && r.transport !== "hsr") return false;
+    return !q || (r.name + r.org + (r.dept || "") + (r.title || "") + r.code + (r.email || "") + (r.phone || "") + (r.car_plate || "") + (r.hsr_from || "")).toLowerCase().includes(q);
   }).sort((a, b) => (o[a.category] - o[b.category]) || a.org.localeCompare(b.org, "zh-Hant") || a.name.localeCompare(b.name, "zh-Hant"));
 }
 function listView() {
-  const rows = listRows(), f = [["all", "全部"], ["in", "已報到"], ["out", "未報到"], ["vip", "貴賓與講者"], ["veg", "素食"], ["credit", "申請積分"], ["walk", "現場登記"]];
+  const rows = listRows(), f = [["all", "全部"], ["in", "已報到"], ["out", "未報到"], ["vip", "貴賓與講者"], ["veg", "素食"], ["car", "自行開車"], ["hsr", "搭乘高鐵"], ["credit", "申請積分"], ["walk", "現場登記"]];
   const body = rows.length ? `<div class="tblw"><table class="tbl"><thead><tr><th>代碼</th><th>姓名</th><th class="hide-s">機構／單位／職稱</th><th>用餐</th><th class="hide-s">積分</th>${isAdmin() ? '<th class="hide-s">類別</th>' : ""}<th>狀態</th><th></th></tr></thead><tbody>${rows.map(r => `<tr>
     <td class="code">${esc(r.code)}</td><td><b>${esc(r.name)}</b>${isAdmin() ? "" : catTag(r.category)}${r.source === "walkin" ? '<span class="cat general">現場</span>' : ""}</td>
-    <td class="hide-s">${esc(r.org)}${r.dept ? "　" + esc(r.dept) : ""}${r.title ? "　" + esc(r.title) : ""}${r.phone ? `<div class="hint" style="margin:0">${esc(r.phone)}</div>` : ""}</td>
+    <td class="hide-s">${esc(r.org)}${r.dept ? "　" + esc(r.dept) : ""}${r.title ? "　" + esc(r.title) : ""}${r.phone ? `<div class="hint" style="margin:0">${esc(r.phone)}</div>` : ""}${trText(r) ? `<div class="hint" style="margin:0">${esc(trText(r))}</div>` : ""}</td>
     <td>${r.meal ? `<span class="mealtag ${r.meal} sm">${esc(MEAL[r.meal])}</span>` : '<span class="no-t">—</span>'}</td>
     <td class="hide-s">${r.need_credit ? `<span class="num" title="身分證字號（遮罩）">${esc(r.id_masked || "申請")}</span>` : '<span class="no-t">—</span>'}</td>
     ${isAdmin() ? `<td class="hide-s"><select data-cat="${esc(r.id)}" aria-label="類別">${Object.keys(CAT).map(k => `<option value="${k}"${r.category === k ? " selected" : ""}>${CAT[k]}</option>`).join("")}</select></td>` : ""}
     <td>${r.checked_in_at ? `<span class="ok-t num">✓ ${esc(tpTime(r.checked_in_at))}</span>` : '<span class="no-t">未報到</span>'}</td>
     <td class="acts">${canCheck() ? (r.checked_in_at ? `<button class="btn sm" data-undo="${esc(r.code)}">取消報到</button>` : `<button class="btn sm pri" data-checkin="${esc(r.code)}">報到</button>`) : ""}${isAdmin() ? ` <button class="btn sm" data-qr="${esc(r.code)}">QR</button> <button class="btn sm danger" data-del="${esc(r.id)}" aria-label="刪除">刪除</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`
     : `<div class="empty">${st.regs.length ? "沒有符合條件的資料。" : "尚無報名資料。"}</div>`;
-  return `<h2>報名名單</h2><div class="tools"><input type="search" id="lq" placeholder="搜尋姓名、機構、單位、電話或代碼" value="${esc(st.q)}"><div class="seg">${f.map(x => `<button data-filter="${x[0]}" aria-pressed="${st.filter === x[0]}">${x[1]}</button>`).join("")}</div>${isAdmin() ? '<button class="btn sm" data-act="csv">下載 CSV</button>' : ""}</div><p class="hint" style="margin:-6px 0 12px">共 ${rows.length} 筆</p>${body}`;
+  return `<h2>報名名單</h2><div class="tools"><input type="search" id="lq" placeholder="搜尋姓名、機構、電話、代碼或車牌" value="${esc(st.q)}"><div class="seg">${f.map(x => `<button data-filter="${x[0]}" aria-pressed="${st.filter === x[0]}">${x[1]}</button>`).join("")}</div>${isAdmin() ? '<button class="btn sm" data-act="csv">下載 CSV</button>' : ""}</div><p class="hint" style="margin:-6px 0 12px">共 ${rows.length} 筆</p>${body}`;
 }
 function showQR(code) {
   const r = byCode(code); if (!r) return;
@@ -270,6 +280,8 @@ function overviewView() {
     <section class="panel"><h3>最新線上報名</h3>${latest.length ? `<ul class="list">${latest.map(r => `<li><div class="who"><b>${esc(r.name)}</b> ${esc(r.title || "")}<span>${esc(r.org)}${r.dept ? "　" + esc(r.dept) : ""}${r.meal ? "｜" + esc(MEAL[r.meal]) : ""}</span></div><span class="hint num" style="margin:0">${esc(tpStamp(r.created_at).replace(/:\d\d$/, ""))}</span></li>`).join("")}</ul>` : '<div class="empty">尚無線上報名。</div>'}</section></div>
   <div class="cols" style="margin-top:18px"><section class="panel"><h3>服務機構（前 10）</h3>${hbars(countBy(pre, r => r.org).slice(0, 10), pre.length, "服務機構")}</section>
     <div class="stack"><section class="panel"><h3>用餐習慣</h3>${hbars([["葷食", pre.filter(r => r.meal === "meat").length], ["素食", pre.filter(r => r.meal === "veg").length], ["未填", pre.filter(r => !r.meal).length]], pre.length, "用餐習慣")}</section>
+    <section class="panel"><h3>交通方式</h3>${hbars([["自行開車", pre.filter(r => r.transport === "car").length], ["搭乘高鐵", pre.filter(r => r.transport === "hsr").length], ["其他", pre.filter(r => r.transport === "other").length], ["未填", pre.filter(r => !r.transport).length]], pre.length, "交通方式")}</section>
+    <section class="panel"><h3>高鐵接駁需求</h3>${(() => { const h = pre.filter(r => r.transport === "hsr"); return h.length ? hbars([...Object.keys(ARR).map(k => ["去程 " + ARR[k] + " 抵達", h.filter(r => r.shuttle_to && r.hsr_arrive === k).length]), ["回程", h.filter(r => r.shuttle_back).length]], h.length, "高鐵接駁需求") + `<p class="hint" style="margin:8px 0 0">起站：${esc(countBy(h, r => r.hsr_from).map(([k, v]) => k + " " + v).join("、"))}</p>` : '<div class="empty">尚無搭乘高鐵的報名者。</div>'; })()}</section>
     <section class="panel"><h3>類別</h3>${hbars(Object.keys(CAT).map(k => [CAT[k], pre.filter(r => r.category === k).length]), pre.length, "類別")}</section>
     <section class="panel"><h3>報名來源</h3>${hbars(Object.keys(SRC).map(k => [SRC[k], pre.filter(r => r.source === k).length]), pre.length, "報名來源")}</section></div></div>
   <section class="panel" style="margin-top:18px"><h3>Google 雲端硬碟同步</h3>
@@ -464,9 +476,9 @@ async function loadPrivateIds() {
 }
 function csvOut(ids) {
   const full = !!ids;
-  const L = [["報到代碼", "姓名", "服務機構", "單位", "職稱", "聯絡電話", "用餐", "申請積分", full ? "身分證字號" : "身分證字號（遮罩）", "類別", "電子郵件", "來源", "報名時間", "報到狀態", "報到時間", "備註"]];
+  const L = [["報到代碼", "姓名", "服務機構", "單位", "職稱", "聯絡電話", "用餐", "申請積分", full ? "身分證字號" : "身分證字號（遮罩）", "類別", "電子郵件", "交通方式", "車牌號碼", "高鐵起站", "接駁去程", "接駁回程", "預計抵達台中站", "來源", "報名時間", "報到狀態", "報到時間", "備註"]];
   const src = { online: "線上報名", import: "名單匯入", walkin: "現場登記", manual: "人工建檔" };
-  st.regs.forEach(r => L.push([r.code, r.name, r.org, r.dept, r.title, r.phone, MEAL[r.meal] || "", r.need_credit ? "是" : "否", full ? (ids[r.id] || "") : (r.id_masked || ""), CAT[r.category], r.email, src[r.source], tpStamp(r.created_at), r.checked_in_at ? "已報到" : "未報到", r.checked_in_at ? tpStamp(r.checked_in_at) : "", r.note]));
+  st.regs.forEach(r => L.push([r.code, r.name, r.org, r.dept, r.title, r.phone, MEAL[r.meal] || "", r.need_credit ? "是" : "否", full ? (ids[r.id] || "") : (r.id_masked || ""), CAT[r.category], r.email, TR[r.transport] || "", r.car_plate || "", r.hsr_from || "", r.transport === "hsr" ? (r.shuttle_to ? "是" : "否") : "", r.transport === "hsr" ? (r.shuttle_back ? "是" : "否") : "", ARR[r.hsr_arrive] || "", src[r.source], tpStamp(r.created_at), r.checked_in_at ? "已報到" : "未報到", r.checked_in_at ? tpStamp(r.checked_in_at) : "", r.note]));
   return "\uFEFF" + L.map(r => r.map(v => { v = String(v ?? ""); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(",")).join("\r\n");
 }
 async function zipAll() {

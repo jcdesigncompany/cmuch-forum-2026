@@ -15,7 +15,7 @@
 const SHEET_DATA = '報名資料';
 const SHEET_STATS = '統計摘要';
 const SHEET_LOG = '同步紀錄';
-const SCRIPT_VERSION = '2026-09-29 v5（通知信含職稱稱謂、活動官網）';
+const SCRIPT_VERSION = '2026-09-30 v6（交通需求：自行開車／高鐵接駁）';
 const TZ = 'Asia/Taipei';
 const AUTO_MINUTES = 5;
 const DEFAULT_SITE_URL = 'https://jcdesigncompany.github.io/cmuch-forum-2026/';
@@ -33,6 +33,9 @@ const MAIL_DEFAULT = {
 const CAT = { vip: '貴賓', speaker: '講者／座長', general: '一般', staff: '工作人員' };
 const SRC = { online: '線上報名', import: '名單匯入', walkin: '現場登記', manual: '人工建檔' };
 const MEAL = { meat: '葷食', veg: '素食' };
+const TRANSPORT = { car: '自行開車', hsr: '搭乘高鐵', other: '其他' };
+const ARRIVE = { before11: '11:00 以前', '1100-1130': '11:00–11:30', '1130-1200': '11:30–12:00', after12: '12:00 以後' };
+const yn = (r, k) => r.transport === 'hsr' ? (r[k] ? '是' : '否') : '';
 // 身分證字號只同步遮罩（例：A12****789）；完整號碼請由管理後台下載「積分申請名單」
 const COLUMNS = [
   ['報到代碼', r => r.code],
@@ -45,6 +48,12 @@ const COLUMNS = [
   ['申請積分', r => r.need_credit ? '是' : '否'],
   ['身分證字號（遮罩）', r => r.id_masked || ''],
   ['電子郵件', r => r.email || ''],
+  ['交通方式', r => TRANSPORT[r.transport] || ''],
+  ['車牌號碼', r => r.car_plate || ''],
+  ['高鐵起站', r => r.hsr_from || ''],
+  ['接駁去程', r => yn(r, 'shuttle_to')],
+  ['接駁回程', r => yn(r, 'shuttle_back')],
+  ['預計抵達台中站', r => ARRIVE[r.hsr_arrive] || ''],
   ['類別', r => CAT[r.category] || '一般'],
   ['來源', r => SRC[r.source] || r.source],
   ['報名時間', r => toDate(r.created_at)],
@@ -178,6 +187,15 @@ function writeStats(ss, rows) {
   });
   push('未填', rows.filter(r => !r.meal).length, rows.filter(r => !r.meal && r.checked_in_at).length);
   push('');
+  push('交通方式', '人數', '備註');
+  push('自行開車（停車優免）', pre.filter(r => r.transport === 'car').length);
+  const hsr = pre.filter(r => r.transport === 'hsr');
+  push('搭乘高鐵', hsr.length, countBy(hsr, r => r.hsr_from).map(x => x[0] + ' ' + x[1]).join('、'));
+  push('其他', pre.filter(r => r.transport === 'other').length);
+  push('未填', pre.filter(r => !r.transport).length);
+  Object.keys(ARRIVE).forEach(k => push('　接駁去程：' + ARRIVE[k] + ' 抵達', hsr.filter(r => r.shuttle_to && r.hsr_arrive === k).length));
+  push('　接駁回程', hsr.filter(r => r.shuttle_back).length);
+  push('');
   push('依類別', '報名', '已報到');
   Object.keys(CAT).forEach(k => {
     const x = pre.filter(r => r.category === k);
@@ -192,7 +210,7 @@ function writeStats(ss, rows) {
   countBy(pre, dayOf).sort((a, b) => a[0] < b[0] ? -1 : 1).forEach(([k, v]) => { cum += v; push(k, v, cum); });
 
   sh.getRange(1, 1, out.length, 3).setValues(out);
-  out.forEach((r, i) => { if (['總覽', '用餐（含現場登記）', '依類別', '依服務機構（前 15）', '每日報名人數'].indexOf(r[0]) > -1) sh.getRange(i + 1, 1, 1, 3).setFontWeight('bold').setBackground('#EAF2FF'); });
+  out.forEach((r, i) => { if (['總覽', '用餐（含現場登記）', '交通方式', '依類別', '依服務機構（前 15）', '每日報名人數'].indexOf(r[0]) > -1) sh.getRange(i + 1, 1, 1, 3).setFontWeight('bold').setBackground('#EAF2FF'); });
   sh.setColumnWidth(1, 260); sh.setColumnWidths(2, 2, 110);
 }
 
@@ -264,7 +282,7 @@ function sendTestNotice() {
   const ui = SpreadsheetApp.getUi(), me = Session.getEffectiveUser().getEmail();
   try {
     const content = rpc('public_site_content', {});
-    sendNotice({ code: 'TEST01', token: '00000000-0000-0000-0000-000000000000', name: '測試報名者', title: '主治醫師', org: '中國醫藥大學兒童醫院', email: me }, content, true);
+    sendNotice({ code: 'TEST01', token: '00000000-0000-0000-0000-000000000000', name: '測試報名者', title: '主治醫師', transport: 'hsr', hsr_from: '台北', shuttle_to: true, shuttle_back: true, hsr_arrive: '1130-1200', org: '中國醫藥大學兒童醫院', email: me }, content, true);
     ui.alert('測試信已寄出', '已寄到 ' + me + '，請至信箱確認內容與 QR code。', ui.ButtonSet.OK);
   } catch (e) { ui.alert('測試信寄送失敗', friendly(e), ui.ButtonSet.OK); }
 }
@@ -276,10 +294,11 @@ function sendPendingNotices() {
   const list = rpc('pending_notifications', { p_secret: prop('SYNC_SECRET') }) || [];
   if (!list.length) return out;
   // 資料庫尚未更新為回傳職稱的版本時，改由報名資料補上職稱，稱謂才會顯示職稱
-  if (list.some(r => !('title' in r))) {
+  const KEYS = ['title', 'transport', 'car_plate', 'hsr_from', 'hsr_arrive', 'shuttle_to', 'shuttle_back'];
+  if (list.some(r => KEYS.some(k => !(k in r)))) {
     const byCode = {};
-    fetchRegistrations().forEach(x => { byCode[x.code] = x.title || ''; });
-    list.forEach(r => { if (!('title' in r)) r.title = byCode[r.code] || ''; });
+    fetchRegistrations().forEach(x => { byCode[x.code] = x; });
+    list.forEach(r => KEYS.forEach(k => { if (!(k in r)) r[k] = (byCode[r.code] || {})[k] || (k.indexOf('shuttle') === 0 ? false : ''); }));
   }
   const content = rpc('public_site_content', {});
   for (const r of list.slice(0, Math.min(NOTIFY_PER_RUN, out.quotaLeft))) {
@@ -332,6 +351,7 @@ function sendNotice(r, content, isTest) {
     row('姓名', e(r.name)) + (r.title ? row('職稱', e(r.title)) : '') + row('服務機構', e(r.org || '')) + row('日期時間', e(when)) +
     (I.checkin ? row('報到時間', e(I.checkin) + ' 起開放報到') : '') +
     row('地點', e(I.venue || '') + (I.address ? '<br><span style="color:#5A6788;font-size:13px">' + e(I.address) + '</span>' : '')) +
+    (trLine(r) ? row('交通', e(trLine(r))) : '') +
     row('活動官網', '<a href="' + e(site) + '" style="color:#1C6DF2;word-break:break-all">' + e(site) + '</a><br><span style="color:#5A6788;font-size:13px">議程、講者、交通與會場導引</span>') +
     '</table>' +
     '<p style="margin:0 0 20px"><a href="' + e(ticketUrl) + '" style="display:inline-block;background:#1C6DF2;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:700">開啟線上報到證</a>' +
@@ -344,7 +364,7 @@ function sendNotice(r, content, isTest) {
     '<div style="background:#F6F8FC;color:#8A96B5;font-size:12px;padding:12px 24px;line-height:1.6">本信件由報名系統自動寄出。' + e(I.funding || '') + '</div>' +
     '</div></div>';
   const text = salute + ' 您好：\n\n' + (intro ? intro + '\n\n' : '') + '報到代碼：' + r.code + '\n日期時間：' + when +
-    '\n地點：' + (I.venue || '') + ' ' + (I.address || '') + '\n線上報到證（含 QR code）：' + ticketUrl + '\n活動官網（議程、講者、交通）：' + site +
+    '\n地點：' + (I.venue || '') + ' ' + (I.address || '') + (trLine(r) ? '\n交通：' + trLine(r) : '') + '\n線上報到證（含 QR code）：' + ticketUrl + '\n活動官網（議程、講者、交通）：' + site +
     (notes.length ? '\n\n' + notes.map(n => '・' + n).join('\n') : '') + (closing ? '\n\n' + closing : '') + '\n\n本信件由報名系統自動寄出。';
   const opt = { name: SENDER_NAME, htmlBody: html, inlineImages: { qr: qr } };
   if (I.contactEmail) opt.replyTo = I.contactEmail;
@@ -363,6 +383,14 @@ function qrBlob(code) {
   return Utilities.newBlob(Utilities.base64Decode(b64), 'image/gif', 'qr.gif');
 }
 
+function trLine(r) {
+  if (r.transport === 'car') return '自行開車' + (r.car_plate ? '（車牌 ' + r.car_plate + '）' : '') + '，停車優免方式將另行通知';
+  if (r.transport === 'hsr') {
+    const s = [r.shuttle_to ? '去程' : '', r.shuttle_back ? '回程' : ''].filter(String).join('、');
+    return '搭乘高鐵（' + (r.hsr_from || '') + '站出發）' + (s ? '，免費接駁：' + s + (r.hsr_arrive ? '（預計 ' + (ARRIVE[r.hsr_arrive] || '') + ' 抵達台中站）' : '') + '，接駁時間與地點將另行通知' : '');
+  }
+  return r.transport === 'other' ? '其他' : '';
+}
 function dateZh(iso) {
   if (!iso) return '';
   const p = String(iso).split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));

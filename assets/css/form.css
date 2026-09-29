@@ -42,3 +42,9 @@
 .choice input{width:18px;height:18px;margin:0}
 .f input:not([type=radio]):not([type=checkbox]){width:100%}
 [hidden]{display:none!important}
+.hsr-tip{background:var(--sky);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:-4px 0 16px;font-size:14px;line-height:1.6}
+.hsr-tip ul{list-style:none;margin:8px 0 10px;padding:0}.hsr-tip li{display:flex;gap:8px;margin:4px 0}
+.hsr-tip li>span{flex:none;font-size:12px;font-weight:700;color:var(--blue);border:1px solid var(--blue);border-radius:6px;padding:0 6px;height:20px;line-height:18px;margin-top:2px}
+.hsr-tip .acts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}.hsr-tip .acts .btn{min-height:40px;padding:0 14px;font-size:14px}
+.hsr-tip small{display:block;color:var(--muted);font-size:12px}
+.f select{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:0 12px;font-size:16px}.f select:focus{border-color:var(--blue);outline:none}
