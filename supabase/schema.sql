@@ -455,7 +455,7 @@ returns jsonb language plpgsql stable security definer set search_path = public 
 begin
   if not public.sync_secret_ok(p_secret) then raise exception 'BAD_SYNC_SECRET'; end if;
   return coalesce((
-    select jsonb_agg(jsonb_build_object('code', code, 'token', token, 'name', name, 'org', org, 'email', email) order by created_at)
+    select jsonb_agg(jsonb_build_object('code', code, 'token', token, 'name', name, 'title', title, 'org', org, 'email', email) order by created_at)
     from (select * from public.registrations
            where source = 'online' and notified_at is null and coalesce(email, '') <> ''
            order by created_at limit 50) x), '[]'::jsonb);

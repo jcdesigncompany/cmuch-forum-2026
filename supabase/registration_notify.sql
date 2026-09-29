@@ -2,6 +2,7 @@
 -- 報名成功通知信（含報到 QR code）
 -- 於 Supabase → SQL Editor 貼上全部內容後按 Run，執行一次即可。
 -- 寄信由 Google 試算表的 Apps Script 負責；本檔新增寄出紀錄欄位與兩個函式。
+-- 可重複執行；更新本檔後（例如稱謂加入職稱）請再執行一次。
 -- =====================================================================
 alter table public.registrations add column if not exists notified_at timestamptz;
 
@@ -26,7 +27,7 @@ returns jsonb language plpgsql stable security definer set search_path = public 
 begin
   if not public.sync_secret_ok(p_secret) then raise exception 'BAD_SYNC_SECRET'; end if;
   return coalesce((
-    select jsonb_agg(jsonb_build_object('code', code, 'token', token, 'name', name, 'org', org, 'email', email) order by created_at)
+    select jsonb_agg(jsonb_build_object('code', code, 'token', token, 'name', name, 'title', title, 'org', org, 'email', email) order by created_at)
     from (select * from public.registrations
            where source = 'online' and notified_at is null and coalesce(email, '') <> ''
            order by created_at limit 50) x), '[]'::jsonb);

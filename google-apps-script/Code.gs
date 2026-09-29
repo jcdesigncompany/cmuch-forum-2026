@@ -262,7 +262,7 @@ function sendTestNotice() {
   const ui = SpreadsheetApp.getUi(), me = Session.getEffectiveUser().getEmail();
   try {
     const content = rpc('public_site_content', {});
-    sendNotice({ code: 'TEST01', token: '00000000-0000-0000-0000-000000000000', name: '測試報名者', org: '中國醫藥大學兒童醫院', email: me }, content, true);
+    sendNotice({ code: 'TEST01', token: '00000000-0000-0000-0000-000000000000', name: '測試報名者', title: '主治醫師', org: '中國醫藥大學兒童醫院', email: me }, content, true);
     ui.alert('測試信已寄出', '已寄到 ' + me + '，請至信箱確認內容與 QR code。', ui.ButtonSet.OK);
   } catch (e) { ui.alert('測試信寄送失敗', friendly(e), ui.ButtonSet.OK); }
 }
@@ -296,7 +296,8 @@ function sendNotice(r, content, isTest) {
   const e = htmlEsc;
   // 信件文字可於網站後台「報名設定 › 報名成功通知信」編輯；未設定時使用預設
   const R = (content && content.registration) || {};
-  const fill = s => String(s || '').replace(/\{姓名\}/g, r.name || '').replace(/\{服務機構\}/g, r.org || '')
+  const salute = (r.name || '') + (r.title ? ' ' + r.title : '');  // 稱謂：姓名＋報名時填寫的職稱
+  const fill = s => String(s || '').replace(/\{姓名\}/g, r.name || '').replace(/\{職稱\}/g, r.title || '').replace(/\{服務機構\}/g, r.org || '')
     .replace(/\{報到代碼\}/g, r.code || '').replace(/\{活動名稱\}/g, title);
   const pick = k => (R[k] == null ? MAIL_DEFAULT[k] : R[k]);
   const subject = fill(String(R.mailSubject || '').trim() || MAIL_DEFAULT.mailSubject).replace(/\s*[\r\n]+\s*/g, ' ');
@@ -313,14 +314,14 @@ function sendNotice(r, content, isTest) {
     '<div style="font-size:20px;font-weight:700;line-height:1.4;margin-top:4px">' + e(title) + '</div></div>' +
     '<div style="padding:24px">' +
     (isTest ? '<p style="background:#FFF3E3;color:#8A4B00;padding:8px 12px;border-radius:8px;font-size:13px">這是測試信，報到代碼與連結僅供確認版面。</p>' : '') +
-    '<p style="font-size:16px;color:#16203D;margin:0 0 12px">' + e(r.name) + ' 您好：</p>' +
+    '<p style="font-size:16px;color:#16203D;margin:0 0 12px">' + e(salute) + ' 您好：</p>' +
     (intro ? '<p style="font-size:15px;color:#16203D;line-height:1.7;margin:0 0 16px">' + para(intro) + '</p>' : '') +
     '<div style="text-align:center;border:1px dashed #DCE4F2;border-radius:12px;padding:18px 12px;margin:0 0 18px">' +
     '<img src="cid:qr" width="220" height="220" alt="報到 QR code" style="display:block;margin:0 auto">' +
     '<div style="font-size:13px;color:#5A6788;margin-top:10px">報到代碼</div>' +
     '<div style="font-size:26px;font-weight:700;letter-spacing:4px;color:#13205A;font-family:Consolas,monospace">' + e(r.code) + '</div></div>' +
     '<table style="border-collapse:collapse;font-size:15px;line-height:1.5;margin:0 0 18px">' +
-    row('姓名', e(r.name)) + row('服務機構', e(r.org || '')) + row('日期時間', e(when)) +
+    row('姓名', e(r.name)) + (r.title ? row('職稱', e(r.title)) : '') + row('服務機構', e(r.org || '')) + row('日期時間', e(when)) +
     (I.checkin ? row('報到時間', e(I.checkin) + ' 起開放報到') : '') +
     row('地點', e(I.venue || '') + (I.address ? '<br><span style="color:#5A6788;font-size:13px">' + e(I.address) + '</span>' : '')) +
     '</table>' +
@@ -333,7 +334,7 @@ function sendNotice(r, content, isTest) {
     '</div>' +
     '<div style="background:#F6F8FC;color:#8A96B5;font-size:12px;padding:12px 24px;line-height:1.6">本信件由報名系統自動寄出。' + e(I.funding || '') + '</div>' +
     '</div></div>';
-  const text = r.name + ' 您好：\n\n' + (intro ? intro + '\n\n' : '') + '報到代碼：' + r.code + '\n日期時間：' + when +
+  const text = salute + ' 您好：\n\n' + (intro ? intro + '\n\n' : '') + '報到代碼：' + r.code + '\n日期時間：' + when +
     '\n地點：' + (I.venue || '') + ' ' + (I.address || '') + '\n線上報到證（含 QR code）：' + ticketUrl +
     (notes.length ? '\n\n' + notes.map(n => '・' + n).join('\n') : '') + (closing ? '\n\n' + closing : '') + '\n\n本信件由報名系統自動寄出。';
   const opt = { name: SENDER_NAME, htmlBody: html, inlineImages: { qr: qr } };
