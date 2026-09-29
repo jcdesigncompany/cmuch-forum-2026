@@ -78,6 +78,7 @@ alter table public.registrations add column if not exists dept text check (char_
 alter table public.registrations add column if not exists meal text check (meal in ('meat','veg'));
 alter table public.registrations add column if not exists need_credit boolean not null default false;
 alter table public.registrations add column if not exists id_masked text;
+alter table public.registrations add column if not exists notified_at timestamptz;  -- 報名成功通知信寄出時間
 create index if not exists registrations_phone_name on public.registrations (name, (regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g')));
 
 -- 身分證字號／居留證號檢查（含檢查碼）
@@ -432,7 +433,7 @@ begin
       'code', code, 'name', name, 'org', org, 'dept', dept, 'title', title, 'email', email, 'phone', phone,
       'category', category, 'source', source, 'note', note, 'meal', meal,
       'need_credit', need_credit, 'id_masked', id_masked,
-      'created_at', created_at, 'consent_at', consent_at, 'checked_in_at', checked_in_at
+      'created_at', created_at, 'consent_at', consent_at, 'checked_in_at', checked_in_at, 'notified_at', notified_at
     ) order by created_at)
     from public.registrations), '[]'::jsonb);
 end $$;
@@ -448,6 +449,25 @@ begin
    where id = 1;
 end $$;
 
+-- 報名成功通知信：待寄清單與寄出回報（Apps Script 以同步金鑰呼叫）
+create or replace function public.pending_notifications(p_secret text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.sync_secret_ok(p_secret) then raise exception 'BAD_SYNC_SECRET'; end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object('code', code, 'token', token, 'name', name, 'org', org, 'email', email) order by created_at)
+    from (select * from public.registrations
+           where source = 'online' and notified_at is null and coalesce(email, '') <> ''
+           order by created_at limit 50) x), '[]'::jsonb);
+end $$;
+
+create or replace function public.mark_notified(p_secret text, p_code text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.sync_secret_ok(p_secret) then raise exception 'BAD_SYNC_SECRET'; end if;
+  update public.registrations set notified_at = now() where code = upper(trim(p_code)) and notified_at is null;
+end $$;
+
 revoke all on function public.rotate_sync_secret() from public;
 revoke all on function public.sync_secret_ok(text) from public;
 revoke all on function public.export_registrations(text) from public;
@@ -455,6 +475,10 @@ revoke all on function public.report_sync(text,int,text) from public;
 grant execute on function public.rotate_sync_secret() to authenticated;
 grant execute on function public.export_registrations(text) to anon, authenticated;
 grant execute on function public.report_sync(text,int,text) to anon, authenticated;
+revoke all on function public.pending_notifications(text) from public;
+revoke all on function public.mark_notified(text,text) from public;
+grant execute on function public.pending_notifications(text) to anon, authenticated;
+grant execute on function public.mark_notified(text,text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------
 -- 9. 資料表存取授權
