@@ -27,11 +27,7 @@ function formView(msg) {
       <label><input type="radio" name="meal" value="meat" required> 葷食</label>
       <label><input type="radio" name="meal" value="veg"> 素食</label>
     </fieldset>
-    <fieldset class="f choice"><legend>是否申請繼續教育積分<em>*</em></legend>
-      <label><input type="radio" name="credit" value="yes" required> 是，需要申請積分</label>
-      <label><input type="radio" name="credit" value="no"> 否</label>
-    </fieldset>
-    <label class="f" id="idfield" hidden><span>身分證字號<em>*</em></span><input name="idno" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例：A123456789"><small>僅供申請繼續教育積分使用；居留證號亦可。送出後頁面只顯示遮罩（例：A12****789）。</small></label>
+    <label class="f" id="idfield"><span>身分證字號<em>*</em></span><input name="idno" required maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例：A123456789"><small>供辦理繼續教育積分申請使用；居留證號亦可。送出後頁面只顯示遮罩（例：A12****789）。</small></label>
     <h2 style="font-size:16px;margin:8px 0 8px">個人資料蒐集告知</h2>
     <div class="consent">${esc(R.consent || "")}</div>
     <label class="agree"><input type="checkbox" name="consent" required><span>我已閱讀並同意上述個人資料蒐集、處理及利用事項</span></label>
@@ -53,18 +49,18 @@ app.addEventListener("submit", async (e) => {
   const f = e.target, btn = f.querySelector("button[type=submit]");
   if (f.id === "reg") {
     const d = Object.fromEntries(new FormData(f));
-    const credit = d.credit === "yes", idno = String(d.idno || "").trim().toUpperCase();
+    const idno = String(d.idno || "").trim().toUpperCase();
     const email = String(d.email || "").trim().toLowerCase();
     if (!d.name?.trim() || !d.org?.trim() || !d.phone?.trim() || !email) return showErr(f, "請填寫姓名、服務機構、聯絡電話與電子郵件。");
     if (phoneDigits(d.phone).length < 8 || phoneDigits(d.phone).length > 15) return showErr(f, "聯絡電話格式不正確，請填寫 8 至 15 位數字。");
     if (email.length > 120 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr(f, "電子郵件格式不正確，請再確認一次。");
     if (!d.meal) return showErr(f, "請選擇用餐習慣。");
-    if (!d.credit) return showErr(f, "請選擇是否申請繼續教育積分。");
-    if (credit && !validTwId(idno)) return showErr(f, "身分證字號格式不正確，請再確認一次。");
+    if (!idno) return showErr(f, "請填寫身分證字號。");
+    if (!validTwId(idno)) return showErr(f, "身分證字號格式不正確，請再確認一次。");
     if (!f.consent.checked) return showErr(f, "請勾選同意個人資料蒐集告知事項。");
     btn.disabled = true; btn.textContent = "送出中…";
     const args = { p_name: d.name, p_org: d.org, p_dept: d.dept || "", p_title: d.title || "", p_phone: d.phone,
-      p_meal: d.meal, p_need_credit: credit, p_id_number: credit ? idno : "", p_consent: true };
+      p_meal: d.meal, p_need_credit: true, p_id_number: idno, p_consent: true };
     let { data, error } = await sb.rpc("register", { ...args, p_email: email });
     // 資料庫尚未更新為含電子郵件的報名函式時，改用舊版函式，避免無法報名
     if (error && (error.code === "PGRST202" || /function .*register/i.test(error.message || ""))) ({ data, error } = await sb.rpc("register", args));
@@ -87,11 +83,4 @@ function showErr(f, m) {
   box.textContent = m; box.scrollIntoView({ block: "center" });
 }
 
-app.addEventListener("change", (e) => {
-  if (e.target.name === "credit") {
-    const box = $("#idfield"), on = e.target.value === "yes";
-    box.hidden = !on; box.querySelector("input").required = on;
-    if (!on) box.querySelector("input").value = "";
-  }
-});
 app.addEventListener("input", (e) => { if (e.target.name === "idno") e.target.value = e.target.value.toUpperCase().replace(/\s/g, ""); });
