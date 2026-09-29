@@ -15,7 +15,7 @@
 const SHEET_DATA = '報名資料';
 const SHEET_STATS = '統計摘要';
 const SHEET_LOG = '同步紀錄';
-const SCRIPT_VERSION = '2026-09-29 v4（通知信含職稱稱謂、活動官網）';
+const SCRIPT_VERSION = '2026-09-29 v5（通知信含職稱稱謂、活動官網）';
 const TZ = 'Asia/Taipei';
 const AUTO_MINUTES = 5;
 const DEFAULT_SITE_URL = 'https://jcdesigncompany.github.io/cmuch-forum-2026/';
@@ -275,6 +275,12 @@ function sendPendingNotices() {
   if (out.quotaLeft < 1) return out;
   const list = rpc('pending_notifications', { p_secret: prop('SYNC_SECRET') }) || [];
   if (!list.length) return out;
+  // 資料庫尚未更新為回傳職稱的版本時，改由報名資料補上職稱，稱謂才會顯示職稱
+  if (list.some(r => !('title' in r))) {
+    const byCode = {};
+    fetchRegistrations().forEach(x => { byCode[x.code] = x.title || ''; });
+    list.forEach(r => { if (!('title' in r)) r.title = byCode[r.code] || ''; });
+  }
   const content = rpc('public_site_content', {});
   for (const r of list.slice(0, Math.min(NOTIFY_PER_RUN, out.quotaLeft))) {
     try {
