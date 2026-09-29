@@ -290,6 +290,24 @@ function statsView(c) {
 }
 
 /* =================== 網站內容編輯 =================== */
+// 報名成功通知信預設內容（由 Google 試算表的 Apps Script 寄出；留白時 Apps Script 亦使用相同預設）
+const MAIL_DEFAULT = {
+  mailSubject: "【報名成功】{活動名稱}　報到代碼 {報到代碼}",
+  mailIntro: "感謝您報名本論壇，您的報名已完成。活動當天請於報到處出示下方 QR code，即可快速完成報到。",
+  mailNotes: "建議將本信或 QR code 截圖保存，當天網路不穩時也能出示。\nQR code 僅供本人報到使用，請勿轉傳。\n如需查詢報到證，也可至活動網站「查詢報到證」輸入姓名與電話。",
+  mailClosing: "",
+};
+function mailFields() {
+  const R = st.C.registration || (st.C.registration = {});
+  for (const k in MAIL_DEFAULT) if (R[k] == null) R[k] = MAIL_DEFAULT[k];
+  return `<h3 style="margin:26px 0 6px">報名成功通知信</h3>
+  <p class="hint" style="margin-top:0">可使用代碼：{姓名}、{服務機構}、{報到代碼}、{活動名稱}，寄出時會自動換成每位報名者的資料。QR code、活動時間地點、線上報到證按鈕會自動附上。修改後按「儲存並發布」，下一封通知信即套用；可在 Google 試算表執行「寄送測試通知信給我」確認。</p>` +
+    fld("信件主旨", "registration.mailSubject") +
+    fld("開頭內文（稱謂「○○○ 您好：」會自動加在最前面）", "registration.mailIntro", "textarea", 'rows="3"') +
+    fld("提醒事項（每行一項，留白則不顯示）", "registration.mailNotes", "textarea", 'rows="4"') +
+    fld("結尾文字（選填，例如：敬祝 順心／中國醫藥大學兒童醫院 敬上）", "registration.mailClosing", "textarea", 'rows="2"') +
+    `<button class="btn sm" type="button" data-act="maildefault">恢復預設內容</button>`;
+}
 const getP = p => p.split(".").reduce((o, k) => o == null ? o : o[k], st.C);
 function setP(p, v) { const ks = p.split("."); let o = st.C; for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks[ks.length - 1]] = v; }
 const fld = (label, path, type = "text", extra = "") => type === "textarea"
@@ -319,7 +337,8 @@ function secBody() {
   if (s === "reg") {
     h = chk("開放線上報名", "registration.open") + `<div class="two">${fld("報名人數上限（留白為不限）", "registration.capacity", "number", 'min="1"')}${fld("報名截止日（顯示用文字）", "registration.deadline", "text", 'placeholder="例：2026年11月20日（五）"')}</div>` +
       fld("報名頁說明", "registration.intro", "textarea") + fld("個人資料蒐集告知聲明", "registration.consent", "textarea", 'rows="9"') +
-      `<p class="hint">告知聲明請依院內個資管理規定，由相關單位確認後再開放報名。截止後請手動取消「開放線上報名」。</p>`;
+      `<p class="hint">告知聲明請依院內個資管理規定，由相關單位確認後再開放報名。截止後請手動取消「開放線上報名」。</p>` +
+      mailFields();
   }
   if (s === "agenda") {
     C.sessions = sortedSessions();
@@ -538,6 +557,10 @@ document.addEventListener("click", async e => {
     st.C.people = F.people.map(p => Object.assign({}, p, { photo: p.photo || photos[p.id] || "" }));
     st.C.info = Object.assign({}, st.C.info, { showInvited: !!F.info.showInvited });
     st.cDirty = true; render(); toast("已套用最新議程與貴賓名單，確認後請按「儲存並發布」");
+  }
+  else if (a === "maildefault") {
+    if (!confirm("將通知信主旨、內文、提醒事項與結尾恢復為預設內容？")) return;
+    Object.assign(st.C.registration, MAIL_DEFAULT); markDirty(); redrawEditor();
   }
   else if (a === "savecontent") saveContent();
   else if (a === "togglereg") {

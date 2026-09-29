@@ -21,6 +21,13 @@ const DEFAULT_SITE_URL = 'https://jcdesigncompany.github.io/cmuch-forum-2026/';
 const QR_LIB_URL = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
 const SENDER_NAME = '中國醫藥大學兒童醫院';
 const NOTIFY_PER_RUN = 40;
+// 通知信預設文字（與網站後台「報名成功通知信」的預設相同）
+const MAIL_DEFAULT = {
+  mailSubject: '【報名成功】{活動名稱}　報到代碼 {報到代碼}',
+  mailIntro: '感謝您報名本論壇，您的報名已完成。活動當天請於報到處出示下方 QR code，即可快速完成報到。',
+  mailNotes: '建議將本信或 QR code 截圖保存，當天網路不穩時也能出示。\nQR code 僅供本人報到使用，請勿轉傳。\n如需查詢報到證，也可至活動網站「查詢報到證」輸入姓名與電話。',
+  mailClosing: '',
+};
 
 const CAT = { vip: '貴賓', speaker: '講者／座長', general: '一般', staff: '工作人員' };
 const SRC = { online: '線上報名', import: '名單匯入', walkin: '現場登記', manual: '人工建檔' };
@@ -287,6 +294,16 @@ function sendNotice(r, content, isTest) {
   const when = dateZh(I.date) + '　' + (I.start || '') + '–' + (I.end || '');
   const qr = qrBlob(r.code);
   const e = htmlEsc;
+  // 信件文字可於網站後台「報名設定 › 報名成功通知信」編輯；未設定時使用預設
+  const R = (content && content.registration) || {};
+  const fill = s => String(s || '').replace(/\{姓名\}/g, r.name || '').replace(/\{服務機構\}/g, r.org || '')
+    .replace(/\{報到代碼\}/g, r.code || '').replace(/\{活動名稱\}/g, title);
+  const pick = k => (R[k] == null ? MAIL_DEFAULT[k] : R[k]);
+  const subject = fill(String(R.mailSubject || '').trim() || MAIL_DEFAULT.mailSubject).replace(/\s*[\r\n]+\s*/g, ' ');
+  const intro = fill(pick('mailIntro')).trim();
+  const notes = fill(pick('mailNotes')).split('\n').map(s => s.trim()).filter(String);
+  const closing = fill(pick('mailClosing')).trim();
+  const para = s => e(s).replace(/\n/g, '<br>');
   const row = (k, v) => '<tr><td style="padding:6px 12px 6px 0;color:#5A6788;white-space:nowrap;vertical-align:top">' + k + '</td><td style="padding:6px 0;color:#16203D">' + v + '</td></tr>';
   const contact = [I.contactName, I.contactPhone, I.contactEmail].filter(String).map(e).join('　');
   const html =
@@ -297,7 +314,7 @@ function sendNotice(r, content, isTest) {
     '<div style="padding:24px">' +
     (isTest ? '<p style="background:#FFF3E3;color:#8A4B00;padding:8px 12px;border-radius:8px;font-size:13px">這是測試信，報到代碼與連結僅供確認版面。</p>' : '') +
     '<p style="font-size:16px;color:#16203D;margin:0 0 12px">' + e(r.name) + ' 您好：</p>' +
-    '<p style="font-size:15px;color:#16203D;line-height:1.7;margin:0 0 16px">感謝您報名本論壇，您的報名已完成。活動當天請於報到處出示下方 QR code，即可快速完成報到。</p>' +
+    (intro ? '<p style="font-size:15px;color:#16203D;line-height:1.7;margin:0 0 16px">' + para(intro) + '</p>' : '') +
     '<div style="text-align:center;border:1px dashed #DCE4F2;border-radius:12px;padding:18px 12px;margin:0 0 18px">' +
     '<img src="cid:qr" width="220" height="220" alt="報到 QR code" style="display:block;margin:0 auto">' +
     '<div style="font-size:13px;color:#5A6788;margin-top:10px">報到代碼</div>' +
@@ -309,19 +326,19 @@ function sendNotice(r, content, isTest) {
     '</table>' +
     '<p style="margin:0 0 20px"><a href="' + e(ticketUrl) + '" style="display:inline-block;background:#1C6DF2;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:700">開啟線上報到證</a>' +
     '　<a href="' + e(mapUrl) + '" style="color:#1C6DF2">Google 地圖</a></p>' +
-    '<ul style="font-size:13px;color:#5A6788;line-height:1.7;padding-left:18px;margin:0 0 16px">' +
-    '<li>建議將本信或 QR code 截圖保存，當天網路不穩時也能出示。</li>' +
-    '<li>QR code 僅供本人報到使用，請勿轉傳。</li>' +
-    '<li>如需查詢報到證，也可至活動網站「查詢報到證」輸入姓名與電話。</li></ul>' +
+    (notes.length ? '<ul style="font-size:13px;color:#5A6788;line-height:1.7;padding-left:18px;margin:0 0 16px">' +
+      notes.map(n => '<li>' + e(n) + '</li>').join('') + '</ul>' : '') +
+    (closing ? '<p style="font-size:15px;color:#16203D;line-height:1.7;margin:0 0 16px">' + para(closing) + '</p>' : '') +
     (contact ? '<p style="font-size:13px;color:#5A6788;margin:0">聯絡窗口：' + contact + '</p>' : '') +
     '</div>' +
     '<div style="background:#F6F8FC;color:#8A96B5;font-size:12px;padding:12px 24px;line-height:1.6">本信件由報名系統自動寄出。' + e(I.funding || '') + '</div>' +
     '</div></div>';
-  const text = r.name + ' 您好：\n\n感謝您報名「' + title + '」，您的報名已完成。\n報到代碼：' + r.code + '\n日期時間：' + when +
-    '\n地點：' + (I.venue || '') + ' ' + (I.address || '') + '\n線上報到證（含 QR code）：' + ticketUrl + '\n\n本信件由報名系統自動寄出。';
+  const text = r.name + ' 您好：\n\n' + (intro ? intro + '\n\n' : '') + '報到代碼：' + r.code + '\n日期時間：' + when +
+    '\n地點：' + (I.venue || '') + ' ' + (I.address || '') + '\n線上報到證（含 QR code）：' + ticketUrl +
+    (notes.length ? '\n\n' + notes.map(n => '・' + n).join('\n') : '') + (closing ? '\n\n' + closing : '') + '\n\n本信件由報名系統自動寄出。';
   const opt = { name: SENDER_NAME, htmlBody: html, inlineImages: { qr: qr } };
   if (I.contactEmail) opt.replyTo = I.contactEmail;
-  MailApp.sendEmail(r.email, (isTest ? '【測試】' : '') + '【報名成功】' + title + '　報到代碼 ' + r.code, text, opt);
+  MailApp.sendEmail(r.email, (isTest ? '【測試】' : '') + subject, text, opt);
 }
 
 // 以 qrcode-generator 於本程式內產生 QR code（報到代碼不會傳給第三方服務）
