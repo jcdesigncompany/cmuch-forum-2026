@@ -15,6 +15,7 @@
 const SHEET_DATA = '報名資料';
 const SHEET_STATS = '統計摘要';
 const SHEET_LOG = '同步紀錄';
+const SCRIPT_VERSION = '2026-09-29 v4（通知信含職稱稱謂、活動官網）';
 const TZ = 'Asia/Taipei';
 const AUTO_MINUTES = 5;
 const DEFAULT_SITE_URL = 'https://jcdesigncompany.github.io/cmuch-forum-2026/';
@@ -228,7 +229,8 @@ function showStatus() {
   const auto = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'autoSync');
   const s = p.getProperty('SYNC_SECRET') || '';
   SpreadsheetApp.getUi().alert('目前設定',
-    '專案網址：' + (p.getProperty('SUPABASE_URL') || '未設定') +
+    '程式版本：' + SCRIPT_VERSION +
+    '\n專案網址：' + (p.getProperty('SUPABASE_URL') || '未設定') +
     '\n同步金鑰：' + (s ? s.slice(0, 9) + '…' + s.slice(-4) : '未設定') +
     '\n自動同步：' + (auto ? '已啟用（每 ' + AUTO_MINUTES + ' 分鐘）' : '未啟用') +
     '\n報名成功通知信：' + (p.getProperty('NOTIFY_ON') === '1' ? '已啟用（網站：' + (p.getProperty('SITE_URL') || DEFAULT_SITE_URL) + '）' : '未啟用') +
@@ -313,7 +315,7 @@ function sendNotice(r, content, isTest) {
     '<div style="background:#13205A;color:#fff;padding:20px 24px"><div style="font-size:13px;color:#C9D6F5">' + e(I.organizer || SENDER_NAME) + '</div>' +
     '<div style="font-size:20px;font-weight:700;line-height:1.4;margin-top:4px">' + e(title) + '</div></div>' +
     '<div style="padding:24px">' +
-    (isTest ? '<p style="background:#FFF3E3;color:#8A4B00;padding:8px 12px;border-radius:8px;font-size:13px">這是測試信，報到代碼與連結僅供確認版面。</p>' : '') +
+    (isTest ? '<p style="background:#FFF3E3;color:#8A4B00;padding:8px 12px;border-radius:8px;font-size:13px">這是測試信，報到代碼與連結僅供確認版面。程式版本：' + e(SCRIPT_VERSION) + '</p>' : '') +
     '<p style="font-size:16px;color:#16203D;margin:0 0 12px">' + e(salute) + ' 您好：</p>' +
     (intro ? '<p style="font-size:15px;color:#16203D;line-height:1.7;margin:0 0 16px">' + para(intro) + '</p>' : '') +
     '<div style="text-align:center;border:1px dashed #DCE4F2;border-radius:12px;padding:18px 12px;margin:0 0 18px">' +
