@@ -1,4 +1,4 @@
-import { sb, configured, secretKeyError, configProblem, MEAL, validTwId, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js";
+import { sb, configured, secretKeyError, configProblem, MEAL, validTwId, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js?v=20260930a";
 
 const app = $("#app");
 const ROLE_NAME = { admin: "管理者", checkin: "報到人員", viewer: "檢視者", pending: "待審核", none: "未授權" };
