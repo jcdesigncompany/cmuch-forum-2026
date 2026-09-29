@@ -6,8 +6,10 @@
  *   2. 擴充功能 → Apps Script，刪除預設內容，貼上本檔全部內容並儲存
  *   3. 回到試算表重新整理，上方選單出現「論壇報名同步」
  *   4. 依序執行「1. 設定連線」「2. 立即同步」「3. 啟用自動同步」
+ *   5. （選用）執行「4. 啟用報名成功通知信」，自動寄送含報到 QR code 的通知信
  *
- * 本程式只讀取報名資料，不會修改網站或資料庫中的任何內容。
+ * 本程式讀取報名資料；啟用通知信後，另會在資料庫記錄每位報名者的通知信寄出時間。
+ * 通知信由執行本程式的 Google 帳號寄出，建議使用單位公務帳號。
  */
 
 const SHEET_DATA = '報名資料';
@@ -15,6 +17,10 @@ const SHEET_STATS = '統計摘要';
 const SHEET_LOG = '同步紀錄';
 const TZ = 'Asia/Taipei';
 const AUTO_MINUTES = 5;
+const DEFAULT_SITE_URL = 'https://jcdesigncompany.github.io/cmuch-forum-2026/';
+const QR_LIB_URL = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
+const SENDER_NAME = '中國醫藥大學兒童醫院';
+const NOTIFY_PER_RUN = 40;
 
 const CAT = { vip: '貴賓', speaker: '講者／座長', general: '一般', staff: '工作人員' };
 const SRC = { online: '線上報名', import: '名單匯入', walkin: '現場登記', manual: '人工建檔' };
@@ -37,6 +43,7 @@ const COLUMNS = [
   ['同意個資告知時間', r => toDate(r.consent_at)],
   ['報到狀態', r => r.checked_in_at ? '已報到' : '未報到'],
   ['報到時間', r => toDate(r.checked_in_at)],
+  ['通知信寄出時間', r => toDate(r.notified_at)],
   ['備註', r => r.note || ''],
 ];
 
@@ -46,7 +53,10 @@ function onOpen() {
     .addItem('1. 設定連線', 'setupConnection')
     .addItem('2. 立即同步', 'syncNow')
     .addItem('3. 啟用每 ' + AUTO_MINUTES + ' 分鐘自動同步', 'enableAutoSync')
+    .addItem('4. 啟用報名成功通知信', 'enableNotify')
     .addSeparator()
+    .addItem('寄送測試通知信給我', 'sendTestNotice')
+    .addItem('停用報名成功通知信', 'disableNotify')
     .addItem('停用自動同步', 'disableAutoSync')
     .addItem('查看目前設定', 'showStatus')
     .addToUi();
@@ -97,6 +107,12 @@ function syncNow() {
     writeStats(ss, rows);
     rpc('report_sync', { p_secret: prop('SYNC_SECRET'), p_count: rows.length, p_url: ss.getUrl() });
     log(ss, started, '成功', rows.length + ' 筆');
+    if (PropertiesService.getScriptProperties().getProperty('NOTIFY_ON') === '1') {
+      try {
+        const n = sendPendingNotices();
+        if (n.sent || n.failed) log(ss, new Date(), n.failed ? '通知信部分失敗' : '通知信', '寄出 ' + n.sent + ' 封' + (n.failed ? '，失敗 ' + n.failed + ' 封：' + n.error : '') + (n.quotaLeft < 5 ? '（今日寄信額度將用完，其餘明日自動補寄）' : ''));
+      } catch (e) { log(ss, new Date(), '通知信失敗', friendly(e)); }
+    }
     if (isManual()) ss.toast('已同步 ' + rows.length + ' 筆報名資料', '論壇報名同步', 5);
   } catch (e) {
     log(ss, started, '失敗', friendly(e));
@@ -207,9 +223,125 @@ function showStatus() {
   SpreadsheetApp.getUi().alert('目前設定',
     '專案網址：' + (p.getProperty('SUPABASE_URL') || '未設定') +
     '\n同步金鑰：' + (s ? s.slice(0, 9) + '…' + s.slice(-4) : '未設定') +
-    '\n自動同步：' + (auto ? '已啟用（每 ' + AUTO_MINUTES + ' 分鐘）' : '未啟用'),
+    '\n自動同步：' + (auto ? '已啟用（每 ' + AUTO_MINUTES + ' 分鐘）' : '未啟用') +
+    '\n報名成功通知信：' + (p.getProperty('NOTIFY_ON') === '1' ? '已啟用（網站：' + (p.getProperty('SITE_URL') || DEFAULT_SITE_URL) + '）' : '未啟用') +
+    '\n今日剩餘寄信額度：' + MailApp.getRemainingDailyQuota() + ' 封',
     SpreadsheetApp.getUi().ButtonSet.OK);
 }
+
+/* ---------------- 報名成功通知信 ---------------- */
+function enableNotify() {
+  const ui = SpreadsheetApp.getUi(), p = PropertiesService.getScriptProperties();
+  prop('SYNC_SECRET');
+  const cur = p.getProperty('SITE_URL') || DEFAULT_SITE_URL;
+  const r = ui.prompt('活動網站網址', '通知信中的「線上報到證」連結會指向此網址。\n目前：' + cur + '\n（留白則沿用）', ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  let site = r.getResponseText().trim() || cur;
+  if (!/^https:\/\//.test(site)) return ui.alert('網址需以 https:// 開頭。');
+  if (!/\/$/.test(site)) site += '/';
+  try { rpc('pending_notifications', { p_secret: prop('SYNC_SECRET') }); }
+  catch (e) { return ui.alert('尚未完成資料庫設定', '請先在 Supabase 執行 supabase/registration_notify.sql，再啟用通知信。\n\n' + friendly(e), ui.ButtonSet.OK); }
+  p.setProperties({ SITE_URL: site, NOTIFY_ON: '1' });
+  ui.alert('已啟用報名成功通知信',
+    '之後每次同步（每 ' + AUTO_MINUTES + ' 分鐘）會自動寄信給尚未收到通知的線上報名者。\n' +
+    '寄件者：' + Session.getEffectiveUser().getEmail() + '\n今日剩餘寄信額度：' + MailApp.getRemainingDailyQuota() + ' 封\n\n' +
+    '建議先執行「寄送測試通知信給我」確認信件內容；並請確認已啟用自動同步。', ui.ButtonSet.OK);
+}
+function disableNotify() {
+  PropertiesService.getScriptProperties().deleteProperty('NOTIFY_ON');
+  SpreadsheetApp.getUi().alert('已停用報名成功通知信。報名資料同步不受影響。');
+}
+function sendTestNotice() {
+  const ui = SpreadsheetApp.getUi(), me = Session.getEffectiveUser().getEmail();
+  try {
+    const content = rpc('public_site_content', {});
+    sendNotice({ code: 'TEST01', token: '00000000-0000-0000-0000-000000000000', name: '測試報名者', org: '中國醫藥大學兒童醫院', email: me }, content, true);
+    ui.alert('測試信已寄出', '已寄到 ' + me + '，請至信箱確認內容與 QR code。', ui.ButtonSet.OK);
+  } catch (e) { ui.alert('測試信寄送失敗', friendly(e), ui.ButtonSet.OK); }
+}
+
+// 寄出尚未通知的線上報名；每封寄出後立即回報，避免重複寄送
+function sendPendingNotices() {
+  const out = { sent: 0, failed: 0, error: '', quotaLeft: MailApp.getRemainingDailyQuota() };
+  if (out.quotaLeft < 1) return out;
+  const list = rpc('pending_notifications', { p_secret: prop('SYNC_SECRET') }) || [];
+  if (!list.length) return out;
+  const content = rpc('public_site_content', {});
+  for (const r of list.slice(0, Math.min(NOTIFY_PER_RUN, out.quotaLeft))) {
+    try {
+      sendNotice(r, content, false);
+      rpc('mark_notified', { p_secret: prop('SYNC_SECRET'), p_code: r.code });
+      out.sent++;
+    } catch (e) { out.failed++; out.error = friendly(e).slice(0, 120); }
+  }
+  out.quotaLeft = MailApp.getRemainingDailyQuota();
+  return out;
+}
+
+function sendNotice(r, content, isTest) {
+  const I = (content && content.info) || {};
+  const site = PropertiesService.getScriptProperties().getProperty('SITE_URL') || DEFAULT_SITE_URL;
+  const title = (I.line1 || '') + (I.line2 || '');
+  const ticketUrl = site + 'ticket.html?t=' + encodeURIComponent(r.token);
+  const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(I.mapQuery || I.address || '');
+  const when = dateZh(I.date) + '　' + (I.start || '') + '–' + (I.end || '');
+  const qr = qrBlob(r.code);
+  const e = htmlEsc;
+  const row = (k, v) => '<tr><td style="padding:6px 12px 6px 0;color:#5A6788;white-space:nowrap;vertical-align:top">' + k + '</td><td style="padding:6px 0;color:#16203D">' + v + '</td></tr>';
+  const contact = [I.contactName, I.contactPhone, I.contactEmail].filter(String).map(e).join('　');
+  const html =
+    '<div style="background:#F6F8FC;padding:24px 12px;font-family:\'Noto Sans TC\',\'Microsoft JhengHei\',\'PingFang TC\',sans-serif">' +
+    '<div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #DCE4F2;border-radius:14px;overflow:hidden">' +
+    '<div style="background:#13205A;color:#fff;padding:20px 24px"><div style="font-size:13px;color:#C9D6F5">' + e(I.organizer || SENDER_NAME) + '</div>' +
+    '<div style="font-size:20px;font-weight:700;line-height:1.4;margin-top:4px">' + e(title) + '</div></div>' +
+    '<div style="padding:24px">' +
+    (isTest ? '<p style="background:#FFF3E3;color:#8A4B00;padding:8px 12px;border-radius:8px;font-size:13px">這是測試信，報到代碼與連結僅供確認版面。</p>' : '') +
+    '<p style="font-size:16px;color:#16203D;margin:0 0 12px">' + e(r.name) + ' 您好：</p>' +
+    '<p style="font-size:15px;color:#16203D;line-height:1.7;margin:0 0 16px">感謝您報名本論壇，您的報名已完成。活動當天請於報到處出示下方 QR code，即可快速完成報到。</p>' +
+    '<div style="text-align:center;border:1px dashed #DCE4F2;border-radius:12px;padding:18px 12px;margin:0 0 18px">' +
+    '<img src="cid:qr" width="220" height="220" alt="報到 QR code" style="display:block;margin:0 auto">' +
+    '<div style="font-size:13px;color:#5A6788;margin-top:10px">報到代碼</div>' +
+    '<div style="font-size:26px;font-weight:700;letter-spacing:4px;color:#13205A;font-family:Consolas,monospace">' + e(r.code) + '</div></div>' +
+    '<table style="border-collapse:collapse;font-size:15px;line-height:1.5;margin:0 0 18px">' +
+    row('姓名', e(r.name)) + row('服務機構', e(r.org || '')) + row('日期時間', e(when)) +
+    (I.checkin ? row('報到時間', e(I.checkin) + ' 起開放報到') : '') +
+    row('地點', e(I.venue || '') + (I.address ? '<br><span style="color:#5A6788;font-size:13px">' + e(I.address) + '</span>' : '')) +
+    '</table>' +
+    '<p style="margin:0 0 20px"><a href="' + e(ticketUrl) + '" style="display:inline-block;background:#1C6DF2;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:700">開啟線上報到證</a>' +
+    '　<a href="' + e(mapUrl) + '" style="color:#1C6DF2">Google 地圖</a></p>' +
+    '<ul style="font-size:13px;color:#5A6788;line-height:1.7;padding-left:18px;margin:0 0 16px">' +
+    '<li>建議將本信或 QR code 截圖保存，當天網路不穩時也能出示。</li>' +
+    '<li>QR code 僅供本人報到使用，請勿轉傳。</li>' +
+    '<li>如需查詢報到證，也可至活動網站「查詢報到證」輸入姓名與電話。</li></ul>' +
+    (contact ? '<p style="font-size:13px;color:#5A6788;margin:0">聯絡窗口：' + contact + '</p>' : '') +
+    '</div>' +
+    '<div style="background:#F6F8FC;color:#8A96B5;font-size:12px;padding:12px 24px;line-height:1.6">本信件由報名系統自動寄出。' + e(I.funding || '') + '</div>' +
+    '</div></div>';
+  const text = r.name + ' 您好：\n\n感謝您報名「' + title + '」，您的報名已完成。\n報到代碼：' + r.code + '\n日期時間：' + when +
+    '\n地點：' + (I.venue || '') + ' ' + (I.address || '') + '\n線上報到證（含 QR code）：' + ticketUrl + '\n\n本信件由報名系統自動寄出。';
+  const opt = { name: SENDER_NAME, htmlBody: html, inlineImages: { qr: qr } };
+  if (I.contactEmail) opt.replyTo = I.contactEmail;
+  MailApp.sendEmail(r.email, (isTest ? '【測試】' : '') + '【報名成功】' + title + '　報到代碼 ' + r.code, text, opt);
+}
+
+// 以 qrcode-generator 於本程式內產生 QR code（報到代碼不會傳給第三方服務）
+function qrBlob(code) {
+  const cache = CacheService.getScriptCache();
+  let src = cache.get('qrlib');
+  if (!src) { src = UrlFetchApp.fetch(QR_LIB_URL).getContentText(); if (src.length < 95000) cache.put('qrlib', src, 21600); }
+  const qrcode = new Function(src + '\n;return qrcode;')();
+  const q = qrcode(0, 'M'); q.addData(String(code)); q.make();
+  const n = q.getModuleCount(), cell = Math.max(4, Math.floor(220 / (n + 8)));
+  const b64 = q.createDataURL(cell, cell * 4).split(',')[1];
+  return Utilities.newBlob(Utilities.base64Decode(b64), 'image/gif', 'qr.gif');
+}
+
+function dateZh(iso) {
+  if (!iso) return '';
+  const p = String(iso).split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  return p[0] + '年' + p[1] + '月' + p[2] + '日（' + '日一二三四五六'[d.getUTCDay()] + '）';
+}
+function htmlEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
 /* ---------------- 工具 ---------------- */
 function prop(k) {

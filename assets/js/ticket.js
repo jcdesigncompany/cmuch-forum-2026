@@ -21,7 +21,7 @@ async function show() {
   const { data, error } = await sb.rpc("get_ticket", { p_token: token });
   if (error || !data || !data[0]) { app.innerHTML = lookupForm(error ? errMsg(error) : "此報到證連結無效，請重新查詢。"); return; }
   const t = data[0], fresh = qs.get("new") === "1";
-  app.innerHTML = `${fresh ? '<div class="msg info" role="status"><b>報名完成！</b>請下載或截圖保存以下報到證，活動當天出示即可報到。</div>' : ""}
+  app.innerHTML = `${fresh ? '<div class="msg info" role="status"><b>報名完成！</b>請下載或截圖保存以下報到證，活動當天出示即可報到。報名成功通知信（含 QR code）也將於數分鐘內寄至您填寫的電子郵件，若未收到請查看垃圾郵件匣。</div>' : ""}
   <div class="box ticket">
     <div style="font-size:14px;color:var(--muted)">${esc(I.line1 + I.line2)}</div>
     <div class="nm">${esc(t.name)}${t.title ? ` <small style="font-size:16px;font-weight:500">${esc(t.title)}</small>` : ""}</div>
