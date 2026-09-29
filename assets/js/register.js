@@ -1,4 +1,4 @@
-import { sb, configured, loadContent, esc, $, dateZh, errMsg, validTwId, phoneDigits } from "./common.js?v=20260930a";
+import { sb, configured, loadContent, esc, $, dateZh, errMsg, validTwId, phoneDigits } from "./common.js?v=20260930b";
 
 const app = $("#app");
 let S;
@@ -92,9 +92,9 @@ function formView(msg) {
   <form class="box" id="reg" novalidate>
     ${msg ? `<div class="msg err" role="alert">${esc(msg)}</div>` : ""}
     <div class="two"><label class="f"><span>姓名<em>*</em></span><input name="name" autocomplete="name" required maxlength="60"></label>
-    <label class="f"><span>職稱</span><input name="title" autocomplete="organization-title" maxlength="60" placeholder="例：主治醫師"></label></div>
+    <label class="f"><span>職稱<em>*</em></span><input name="title" required autocomplete="organization-title" maxlength="60" placeholder="例：主治醫師"></label></div>
     <div class="two"><label class="f"><span>服務機構<em>*</em></span><input name="org" autocomplete="organization" required maxlength="120" placeholder="例：中國醫藥大學兒童醫院"></label>
-    <label class="f"><span>單位</span><input name="dept" maxlength="120" placeholder="例：小兒科、護理部"></label></div>
+    <label class="f"><span>單位<em>*</em></span><input name="dept" required maxlength="120" placeholder="例：小兒科、護理部"></label></div>
     <div class="two"><label class="f"><span>聯絡電話<em>*</em></span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" placeholder="例：0912-345-678"><small>用於活動聯繫，以及查詢報到證</small></label>
     <label class="f"><span>電子郵件<em>*</em></span><input name="email" type="email" inputmode="email" autocomplete="email" required maxlength="120" spellcheck="false" autocapitalize="off" placeholder="例：name@example.com"><small>用於寄送活動通知</small></label></div>
     <fieldset class="f choice"><legend>用餐習慣<em>*</em></legend>
@@ -126,7 +126,7 @@ app.addEventListener("submit", async (e) => {
     const d = Object.fromEntries(new FormData(f));
     const idno = String(d.idno || "").trim().toUpperCase();
     const email = String(d.email || "").trim().toLowerCase();
-    if (!d.name?.trim() || !d.org?.trim() || !d.phone?.trim() || !email) return showErr(f, "請填寫姓名、服務機構、聯絡電話與電子郵件。");
+    if (!d.name?.trim() || !d.title?.trim() || !d.org?.trim() || !d.dept?.trim() || !d.phone?.trim() || !email) return showErr(f, "請填寫姓名、職稱、服務機構、單位、聯絡電話與電子郵件。");
     if (phoneDigits(d.phone).length < 8 || phoneDigits(d.phone).length > 15) return showErr(f, "聯絡電話格式不正確，請填寫 8 至 15 位數字。");
     if (email.length > 120 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr(f, "電子郵件格式不正確，請再確認一次。");
     if (!d.meal) return showErr(f, "請選擇用餐習慣。");
