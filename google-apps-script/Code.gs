@@ -15,7 +15,7 @@
 const SHEET_DATA = '報名資料';
 const SHEET_STATS = '統計摘要';
 const SHEET_LOG = '同步紀錄';
-const SCRIPT_VERSION = '2026-09-30 v6（交通需求：自行開車／高鐵接駁）';
+const SCRIPT_VERSION = '2026-09-30 v7（高鐵接駁：1F 7號出口載客區）';
 const TZ = 'Asia/Taipei';
 const AUTO_MINUTES = 5;
 const DEFAULT_SITE_URL = 'https://jcdesigncompany.github.io/cmuch-forum-2026/';
@@ -387,7 +387,7 @@ function trLine(r) {
   if (r.transport === 'car') return '自行開車' + (r.car_plate ? '（車牌 ' + r.car_plate + '）' : '') + '，停車優免方式將另行通知';
   if (r.transport === 'hsr') {
     const s = [r.shuttle_to ? '去程' : '', r.shuttle_back ? '回程' : ''].filter(String).join('、');
-    return '搭乘高鐵（' + (r.hsr_from || '') + '站出發）' + (s ? '，免費接駁：' + s + (r.hsr_arrive ? '（預計 ' + (ARRIVE[r.hsr_arrive] || '') + ' 抵達台中站）' : '') + '，接駁時間與地點將另行通知' : '');
+    return '搭乘高鐵（' + (r.hsr_from || '') + '站出發）' + (s ? '，免費接駁：' + s + (r.hsr_arrive ? '（預計 ' + (ARRIVE[r.hsr_arrive] || '') + ' 抵達台中站）' : '') + '。抵達後請至高鐵台中站 1F 7號出口載客區等候接駁車，至會場約 30–40 分鐘，發車時間將另行通知' : '');
   }
   return r.transport === 'other' ? '其他' : '';
 }
