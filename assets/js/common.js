@@ -1,5 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/+esm";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260930a";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260930b";
 
 function isSecretKey(k) {
   if (/^sb_secret_/.test(k)) return true;
@@ -147,7 +147,7 @@ export const phoneDigits = p => String(p || "").replace(/\D/g, "");
 export function errMsg(e) {
   const m = (e && (e.message || e.error_description)) || "";
   const map = {
-    REG_CLOSED: "目前未開放報名。", NO_CONSENT: "請勾選同意個人資料蒐集告知事項。", MISSING_FIELDS: "請填寫所有必填欄位（姓名、服務機構、聯絡電話、電子郵件、用餐習慣、交通方式）。", BAD_PLATE: "車牌號碼格式不正確，請再確認一次。",
+    REG_CLOSED: "目前未開放報名。", NO_CONSENT: "請勾選同意個人資料蒐集告知事項。", MISSING_FIELDS: "請填寫所有必填欄位（姓名、職稱、服務機構、單位、聯絡電話、電子郵件、用餐習慣、交通方式）。", BAD_PLATE: "車牌號碼格式不正確，請再確認一次。",
     BAD_EMAIL: "電子郵件格式不正確。", REG_FULL: "報名人數已額滿，感謝您的關注。", DUP_EMAIL: "此電子郵件已完成報名，請使用「查詢報到證」。",
     BAD_PHONE: "聯絡電話格式不正確，請填寫 8 至 15 位數字。", BAD_ID: "身分證字號格式不正確，請再確認一次。",
     DUP_ID: "此身分證字號已完成報名，請使用「查詢報到證」。", DUP_PHONE: "此姓名與電話已完成報名，請使用「查詢報到證」。",

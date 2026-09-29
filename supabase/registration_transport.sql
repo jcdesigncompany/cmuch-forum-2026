@@ -35,7 +35,8 @@ declare
 begin
   if coalesce((cfg->>'open')::boolean, false) is not true then raise exception 'REG_CLOSED'; end if;
   if p_consent is not true then raise exception 'NO_CONSENT'; end if;
-  if coalesce(trim(p_name), '') = '' or coalesce(trim(p_org), '') = '' or v_phone = '' or v_email = '' or coalesce(p_meal, '') = '' then
+  if coalesce(trim(p_name), '') = '' or coalesce(trim(p_org), '') = '' or v_phone = '' or v_email = '' or coalesce(p_meal, '') = ''
+     or (p_transport is not null and (coalesce(trim(p_title), '') = '' or coalesce(trim(p_dept), '') = '')) then
     raise exception 'MISSING_FIELDS';
   end if;
   if p_meal not in ('meat','veg') then raise exception 'MISSING_FIELDS'; end if;

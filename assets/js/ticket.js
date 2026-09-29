@@ -1,4 +1,4 @@
-import { sb, configured, loadContent, esc, $, dateZh, MEAL, ticketCard, drawQR, downloadCanvas, calUrl, mapsUrl, errMsg } from "./common.js?v=20260930a";
+import { sb, configured, loadContent, esc, $, dateZh, MEAL, ticketCard, drawQR, downloadCanvas, calUrl, mapsUrl, errMsg } from "./common.js?v=20260930b";
 
 const app = $("#app");
 const qs = new URLSearchParams(location.search);
