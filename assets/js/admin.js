@@ -301,9 +301,9 @@ function mailFields() {
   const R = st.C.registration || (st.C.registration = {});
   for (const k in MAIL_DEFAULT) if (R[k] == null) R[k] = MAIL_DEFAULT[k];
   return `<h3 style="margin:26px 0 6px">報名成功通知信</h3>
-  <p class="hint" style="margin-top:0">可使用代碼：{姓名}、{服務機構}、{報到代碼}、{活動名稱}，寄出時會自動換成每位報名者的資料。QR code、活動時間地點、線上報到證按鈕會自動附上。修改後按「儲存並發布」，下一封通知信即套用；可在 Google 試算表執行「寄送測試通知信給我」確認。</p>` +
+  <p class="hint" style="margin-top:0">可使用代碼：{姓名}、{職稱}、{服務機構}、{報到代碼}、{活動名稱}，寄出時會自動換成每位報名者的資料。QR code、活動時間地點、線上報到證按鈕會自動附上。修改後按「儲存並發布」，下一封通知信即套用；可在 Google 試算表執行「寄送測試通知信給我」確認。</p>` +
     fld("信件主旨", "registration.mailSubject") +
-    fld("開頭內文（稱謂「○○○ 您好：」會自動加在最前面）", "registration.mailIntro", "textarea", 'rows="3"') +
+    fld("開頭內文（稱謂「姓名 職稱 您好：」會自動加在最前面；未填職稱者只顯示姓名）", "registration.mailIntro", "textarea", 'rows="3"') +
     fld("提醒事項（每行一項，留白則不顯示）", "registration.mailNotes", "textarea", 'rows="4"') +
     fld("結尾文字（選填，例如：敬祝 順心／中國醫藥大學兒童醫院 敬上）", "registration.mailClosing", "textarea", 'rows="2"') +
     `<button class="btn sm" type="button" data-act="maildefault">恢復預設內容</button>`;
