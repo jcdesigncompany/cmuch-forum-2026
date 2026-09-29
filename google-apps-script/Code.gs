@@ -324,6 +324,7 @@ function sendNotice(r, content, isTest) {
     row('姓名', e(r.name)) + (r.title ? row('職稱', e(r.title)) : '') + row('服務機構', e(r.org || '')) + row('日期時間', e(when)) +
     (I.checkin ? row('報到時間', e(I.checkin) + ' 起開放報到') : '') +
     row('地點', e(I.venue || '') + (I.address ? '<br><span style="color:#5A6788;font-size:13px">' + e(I.address) + '</span>' : '')) +
+    row('活動官網', '<a href="' + e(site) + '" style="color:#1C6DF2;word-break:break-all">' + e(site) + '</a><br><span style="color:#5A6788;font-size:13px">議程、講者、交通與會場導引</span>') +
     '</table>' +
     '<p style="margin:0 0 20px"><a href="' + e(ticketUrl) + '" style="display:inline-block;background:#1C6DF2;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:700">開啟線上報到證</a>' +
     '　<a href="' + e(mapUrl) + '" style="color:#1C6DF2">Google 地圖</a></p>' +
@@ -335,7 +336,7 @@ function sendNotice(r, content, isTest) {
     '<div style="background:#F6F8FC;color:#8A96B5;font-size:12px;padding:12px 24px;line-height:1.6">本信件由報名系統自動寄出。' + e(I.funding || '') + '</div>' +
     '</div></div>';
   const text = salute + ' 您好：\n\n' + (intro ? intro + '\n\n' : '') + '報到代碼：' + r.code + '\n日期時間：' + when +
-    '\n地點：' + (I.venue || '') + ' ' + (I.address || '') + '\n線上報到證（含 QR code）：' + ticketUrl +
+    '\n地點：' + (I.venue || '') + ' ' + (I.address || '') + '\n線上報到證（含 QR code）：' + ticketUrl + '\n活動官網（議程、講者、交通）：' + site +
     (notes.length ? '\n\n' + notes.map(n => '・' + n).join('\n') : '') + (closing ? '\n\n' + closing : '') + '\n\n本信件由報名系統自動寄出。';
   const opt = { name: SENDER_NAME, htmlBody: html, inlineImages: { qr: qr } };
   if (I.contactEmail) opt.replyTo = I.contactEmail;
