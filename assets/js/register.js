@@ -1,4 +1,4 @@
-import { sb, configured, loadContent, esc, $, dateZh, errMsg, validTwId, phoneDigits } from "./common.js?v=20260930b";
+import { sb, configured, loadContent, esc, $, dateZh, errMsg, validTwId, phoneDigits } from "./common.js?v=20260930c";
 
 const app = $("#app");
 let S;
@@ -102,7 +102,6 @@ function formView(msg) {
       <label><input type="radio" name="meal" value="veg"> 素食</label>
     </fieldset>
     ${transportView()}
-    <label class="f" id="idfield"><span>身分證字號<em>*</em></span><input name="idno" required maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例：A123456789"><small>供辦理繼續教育積分申請使用；居留證號亦可。送出後頁面只顯示遮罩（例：A12****789）。</small></label>
     <h2 style="font-size:16px;margin:8px 0 8px">個人資料蒐集告知</h2>
     <div class="consent">${esc(R.consent || "")}</div>
     <label class="agree"><input type="checkbox" name="consent" required><span>我已閱讀並同意上述個人資料蒐集、處理及利用事項</span></label>
@@ -124,7 +123,6 @@ app.addEventListener("submit", async (e) => {
   const f = e.target, btn = f.querySelector("button[type=submit]");
   if (f.id === "reg") {
     const d = Object.fromEntries(new FormData(f));
-    const idno = String(d.idno || "").trim().toUpperCase();
     const email = String(d.email || "").trim().toLowerCase();
     if (!d.name?.trim() || !d.title?.trim() || !d.org?.trim() || !d.dept?.trim() || !d.phone?.trim() || !email) return showErr(f, "請填寫姓名、職稱、服務機構、單位、聯絡電話與電子郵件。");
     if (phoneDigits(d.phone).length < 8 || phoneDigits(d.phone).length > 15) return showErr(f, "聯絡電話格式不正確，請填寫 8 至 15 位數字。");
@@ -136,12 +134,10 @@ app.addEventListener("submit", async (e) => {
     if (tr === "car" && !/^[A-Z0-9]{2,4}-?[A-Z0-9]{2,4}$/.test(plate)) return showErr(f, "請填寫正確的車牌號碼，例如 ABC-1234。");
     if (tr === "hsr" && !d.hsr_from) return showErr(f, "請選擇高鐵起站。");
     if (toOn && !d.hsr_arrive) return showErr(f, "請選擇預計抵達高鐵台中站的時間。");
-    if (!idno) return showErr(f, "請填寫身分證字號。");
-    if (!validTwId(idno)) return showErr(f, "身分證字號格式不正確，請再確認一次。");
     if (!f.consent.checked) return showErr(f, "請勾選同意個人資料蒐集告知事項。");
     btn.disabled = true; btn.textContent = "送出中…";
     const args = { p_name: d.name, p_org: d.org, p_dept: d.dept || "", p_title: d.title || "", p_phone: d.phone,
-      p_meal: d.meal, p_need_credit: true, p_id_number: idno, p_consent: true };
+      p_meal: d.meal, p_need_credit: false, p_id_number: "", p_consent: true };
     const trip = { p_transport: tr, p_car_plate: tr === "car" ? plate : null, p_hsr_from: tr === "hsr" ? d.hsr_from : null,
       p_hsr_arrive: toOn ? d.hsr_arrive : null, p_shuttle_to: toOn, p_shuttle_back: backOn };
     // 資料庫尚未更新時依序改用較舊版本的報名函式，避免無法報名
@@ -198,4 +194,4 @@ app.addEventListener("click", (e) => {
   const done = () => { b.textContent = "已複製"; setTimeout(() => (b.textContent = "複製行程資訊"), 1800); };
   try { navigator.clipboard.writeText(b.dataset.copytrip.replace(/\\n/g, "\n")).then(done, () => alert(b.dataset.copytrip.replace(/\\n/g, "\n"))); } catch { alert(b.dataset.copytrip.replace(/\\n/g, "\n")); }
 });
-app.addEventListener("input", (e) => { if (e.target.name === "idno" || e.target.name === "plate") e.target.value = e.target.value.toUpperCase().replace(/\s/g, ""); });
+app.addEventListener("input", (e) => { if (e.target.name === "plate") e.target.value = e.target.value.toUpperCase().replace(/\s/g, ""); });

@@ -1,4 +1,4 @@
-import { sb, configured, secretKeyError, configProblem, MEAL, validTwId, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js?v=20260930b";
+import { sb, configured, secretKeyError, configProblem, MEAL, validTwId, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js?v=20260930c";
 
 const app = $("#app");
 const ROLE_NAME = { admin: "管理者", checkin: "報到人員", viewer: "檢視者", pending: "待審核", none: "未授權" };
@@ -210,12 +210,11 @@ function listRows() {
   }).sort((a, b) => (o[a.category] - o[b.category]) || a.org.localeCompare(b.org, "zh-Hant") || a.name.localeCompare(b.name, "zh-Hant"));
 }
 function listView() {
-  const rows = listRows(), f = [["all", "全部"], ["in", "已報到"], ["out", "未報到"], ["vip", "貴賓與講者"], ["veg", "素食"], ["car", "自行開車"], ["hsr", "搭乘高鐵"], ["credit", "申請積分"], ["walk", "現場登記"]];
-  const body = rows.length ? `<div class="tblw"><table class="tbl"><thead><tr><th>代碼</th><th>姓名</th><th class="hide-s">機構／單位／職稱</th><th>用餐</th><th class="hide-s">積分</th>${isAdmin() ? '<th class="hide-s">類別</th>' : ""}<th>狀態</th><th></th></tr></thead><tbody>${rows.map(r => `<tr>
+  const rows = listRows(), f = [["all", "全部"], ["in", "已報到"], ["out", "未報到"], ["vip", "貴賓與講者"], ["veg", "素食"], ["car", "自行開車"], ["hsr", "搭乘高鐵"], ["walk", "現場登記"]];
+  const body = rows.length ? `<div class="tblw"><table class="tbl"><thead><tr><th>代碼</th><th>姓名</th><th class="hide-s">機構／單位／職稱</th><th>用餐</th>${isAdmin() ? '<th class="hide-s">類別</th>' : ""}<th>狀態</th><th></th></tr></thead><tbody>${rows.map(r => `<tr>
     <td class="code">${esc(r.code)}</td><td><b>${esc(r.name)}</b>${isAdmin() ? "" : catTag(r.category)}${r.source === "walkin" ? '<span class="cat general">現場</span>' : ""}</td>
     <td class="hide-s">${esc(r.org)}${r.dept ? "　" + esc(r.dept) : ""}${r.title ? "　" + esc(r.title) : ""}${r.phone ? `<div class="hint" style="margin:0">${esc(r.phone)}</div>` : ""}${trText(r) ? `<div class="hint" style="margin:0">${esc(trText(r))}</div>` : ""}</td>
     <td>${r.meal ? `<span class="mealtag ${r.meal} sm">${esc(MEAL[r.meal])}</span>` : '<span class="no-t">—</span>'}</td>
-    <td class="hide-s">${r.need_credit ? `<span class="num" title="身分證字號（遮罩）">${esc(r.id_masked || "申請")}</span>` : '<span class="no-t">—</span>'}</td>
     ${isAdmin() ? `<td class="hide-s"><select data-cat="${esc(r.id)}" aria-label="類別">${Object.keys(CAT).map(k => `<option value="${k}"${r.category === k ? " selected" : ""}>${CAT[k]}</option>`).join("")}</select></td>` : ""}
     <td>${r.checked_in_at ? `<span class="ok-t num">✓ ${esc(tpTime(r.checked_in_at))}</span>` : '<span class="no-t">未報到</span>'}</td>
     <td class="acts">${canCheck() ? (r.checked_in_at ? `<button class="btn sm" data-undo="${esc(r.code)}">取消報到</button>` : `<button class="btn sm pri" data-checkin="${esc(r.code)}">報到</button>`) : ""}${isAdmin() ? ` <button class="btn sm" data-qr="${esc(r.code)}">QR</button> <button class="btn sm danger" data-del="${esc(r.id)}" aria-label="刪除">刪除</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`
@@ -275,7 +274,7 @@ function overviewView() {
     <div class="kpi"><dt>今日新增（線上）</dt><dd>${nToday}</dd></div><div class="kpi"><dt>近 7 日新增（線上）</dt><dd>${nWeek}</dd></div>
     <div class="kpi"><dt>${cap ? "剩餘名額" : "線上報名累計"}</dt><dd>${cap ? Math.max(0, cap - pre.length) : online.length}</dd></div>
     <div class="kpi"><dt>用餐：葷食／素食</dt><dd>${pre.filter(r => r.meal === "meat").length}<small> / </small>${pre.filter(r => r.meal === "veg").length}</dd>${pre.some(r => !r.meal) ? `<div class="hint" style="margin:2px 0 0">未填 ${pre.filter(r => !r.meal).length} 人</div>` : ""}</div>
-    <div class="kpi"><dt>申請繼續教育積分</dt><dd>${pre.filter(r => r.need_credit).length}<small> 人</small></dd></div></dl>
+</dl>
   <div class="cols" style="margin-top:18px"><section class="panel"><h3>每日報名人數</h3><p class="hint" style="margin:-4px 0 8px">含線上報名與名單匯入，最近 30 日；游標移到長條可看累計人數。</p>${dailyChart(pre)}</section>
     <section class="panel"><h3>最新線上報名</h3>${latest.length ? `<ul class="list">${latest.map(r => `<li><div class="who"><b>${esc(r.name)}</b> ${esc(r.title || "")}<span>${esc(r.org)}${r.dept ? "　" + esc(r.dept) : ""}${r.meal ? "｜" + esc(MEAL[r.meal]) : ""}</span></div><span class="hint num" style="margin:0">${esc(tpStamp(r.created_at).replace(/:\d\d$/, ""))}</span></li>`).join("")}</ul>` : '<div class="empty">尚無線上報名。</div>'}</section></div>
   <div class="cols" style="margin-top:18px"><section class="panel"><h3>服務機構（前 10）</h3>${hbars(countBy(pre, r => r.org).slice(0, 10), pre.length, "服務機構")}</section>
