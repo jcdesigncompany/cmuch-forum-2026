@@ -15,9 +15,10 @@
 const SHEET_DATA = '報名資料';
 const SHEET_STATS = '統計摘要';
 const SHEET_LOG = '同步紀錄';
-const SCRIPT_VERSION = '2026-09-30 v8（交通方式：自行開車／搭乘高鐵）';
+const SCRIPT_VERSION = '2026-09-30 v9（試算表每 4 小時同步；通知信每 15 分鐘檢查）';
 const TZ = 'Asia/Taipei';
-const AUTO_MINUTES = 5;
+const SYNC_HOURS = 4;       // 試算表自動同步間隔（小時）
+const NOTICE_MINUTES = 15;  // 通知信檢查間隔（分鐘），不寫入試算表；僅可為 1、5、10、15、30
 const DEFAULT_SITE_URL = 'https://jcdesigncompany.github.io/cmuch-forum-2026/';
 const QR_LIB_URL = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
 const SENDER_NAME = '中國醫藥大學兒童醫院';
@@ -69,7 +70,7 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('論壇報名同步')
     .addItem('1. 設定連線', 'setupConnection')
     .addItem('2. 立即同步', 'syncNow')
-    .addItem('3. 啟用每 ' + AUTO_MINUTES + ' 分鐘自動同步', 'enableAutoSync')
+    .addItem('3. 啟用每 ' + SYNC_HOURS + ' 小時自動同步', 'enableAutoSync')
     .addItem('4. 啟用報名成功通知信', 'enableNotify')
     .addSeparator()
     .addItem('寄送測試通知信給我', 'sendTestNotice')
@@ -124,12 +125,7 @@ function syncNow() {
     writeStats(ss, rows);
     rpc('report_sync', { p_secret: prop('SYNC_SECRET'), p_count: rows.length, p_url: ss.getUrl() });
     log(ss, started, '成功', rows.length + ' 筆');
-    if (PropertiesService.getScriptProperties().getProperty('NOTIFY_ON') === '1') {
-      try {
-        const n = sendPendingNotices();
-        if (n.sent || n.failed) log(ss, new Date(), n.failed ? '通知信部分失敗' : '通知信', '寄出 ' + n.sent + ' 封' + (n.failed ? '，失敗 ' + n.failed + ' 封：' + n.error : '') + (n.quotaLeft < 5 ? '（今日寄信額度將用完，其餘明日自動補寄）' : ''));
-      } catch (e) { log(ss, new Date(), '通知信失敗', friendly(e)); }
-    }
+    runNotices(ss);
     if (isManual()) ss.toast('已同步 ' + rows.length + ' 筆報名資料', '論壇報名同步', 5);
   } catch (e) {
     log(ss, started, '失敗', friendly(e));
@@ -228,29 +224,54 @@ function log(ss, started, status, detail) {
   if (extra > 0) sh.deleteRows(2, extra);
 }
 
+// 寄送待寄通知信並寫入同步紀錄（僅在有寄信時記錄）
+function runNotices(ss) {
+  if (PropertiesService.getScriptProperties().getProperty('NOTIFY_ON') !== '1') return;
+  try {
+    const n = sendPendingNotices();
+    if (n.sent || n.failed) log(ss, new Date(), n.failed ? '通知信部分失敗' : '通知信', '寄出 ' + n.sent + ' 封' + (n.failed ? '，失敗 ' + n.failed + ' 封：' + n.error : '') + (n.quotaLeft < 5 ? '（今日寄信額度將用完，其餘明日自動補寄）' : ''));
+  } catch (e) { log(ss, new Date(), '通知信失敗', friendly(e)); }
+}
+
 /* ---------------- 自動同步 ---------------- */
 function enableAutoSync() {
   disableAutoSync(true);
-  ScriptApp.newTrigger('autoSync').timeBased().everyMinutes(AUTO_MINUTES).create();
-  SpreadsheetApp.getUi().alert('已啟用自動同步', '每 ' + AUTO_MINUTES + ' 分鐘會自動更新一次報名資料。\n關閉試算表後仍會持續執行。', SpreadsheetApp.getUi().ButtonSet.OK);
+  ScriptApp.newTrigger('autoSync').timeBased().everyHours(SYNC_HOURS).create();
+  if (PropertiesService.getScriptProperties().getProperty('NOTIFY_ON') === '1') ensureNoticeTrigger();
+  SpreadsheetApp.getUi().alert('已啟用自動同步', '每 ' + SYNC_HOURS + ' 小時會自動更新一次試算表的報名資料。\n關閉試算表後仍會持續執行；需要最新資料時可隨時按「2. 立即同步」。', SpreadsheetApp.getUi().ButtonSet.OK);
 }
 function disableAutoSync(silent) {
-  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'autoSync').forEach(t => ScriptApp.deleteTrigger(t));
+  // 一併移除舊版每 5 分鐘的觸發條件（同為 autoSync）
+  deleteTriggers('autoSync');
   if (silent !== true) SpreadsheetApp.getUi().alert('已停用自動同步。');
+}
+function deleteTriggers(fn) {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === fn).forEach(t => ScriptApp.deleteTrigger(t));
+}
+// 通知信獨立檢查：只查詢是否有新報名需寄信，不更新試算表
+function ensureNoticeTrigger() {
+  deleteTriggers('autoNotify');
+  ScriptApp.newTrigger('autoNotify').timeBased().everyMinutes(NOTICE_MINUTES).create();
+}
+function autoNotify() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return;
+  try { runNotices(SpreadsheetApp.getActive()); } finally { lock.releaseLock(); }
 }
 function autoSync() { PropertiesService.getScriptProperties().setProperty('_AUTO', '1'); try { syncNow(); } finally { PropertiesService.getScriptProperties().deleteProperty('_AUTO'); } }
 function isManual() { return PropertiesService.getScriptProperties().getProperty('_AUTO') !== '1'; }
 
 function showStatus() {
   const p = PropertiesService.getScriptProperties();
-  const auto = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'autoSync');
+  const has = fn => ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === fn);
+  const auto = has('autoSync'), notice = has('autoNotify');
   const s = p.getProperty('SYNC_SECRET') || '';
   SpreadsheetApp.getUi().alert('目前設定',
     '程式版本：' + SCRIPT_VERSION +
     '\n專案網址：' + (p.getProperty('SUPABASE_URL') || '未設定') +
     '\n同步金鑰：' + (s ? s.slice(0, 9) + '…' + s.slice(-4) : '未設定') +
-    '\n自動同步：' + (auto ? '已啟用（每 ' + AUTO_MINUTES + ' 分鐘）' : '未啟用') +
-    '\n報名成功通知信：' + (p.getProperty('NOTIFY_ON') === '1' ? '已啟用（網站：' + (p.getProperty('SITE_URL') || DEFAULT_SITE_URL) + '）' : '未啟用') +
+    '\n自動同步：' + (auto ? '已啟用（每 ' + SYNC_HOURS + ' 小時）' : '未啟用') +
+    '\n報名成功通知信：' + (p.getProperty('NOTIFY_ON') === '1' ? '已啟用（' + (notice ? '每 ' + NOTICE_MINUTES + ' 分鐘檢查' : '未排程，請重新執行「4. 啟用報名成功通知信」') + '；網站：' + (p.getProperty('SITE_URL') || DEFAULT_SITE_URL) + '）' : '未啟用') +
     '\n今日剩餘寄信額度：' + MailApp.getRemainingDailyQuota() + ' 封',
     SpreadsheetApp.getUi().ButtonSet.OK);
 }
@@ -268,13 +289,15 @@ function enableNotify() {
   try { rpc('pending_notifications', { p_secret: prop('SYNC_SECRET') }); }
   catch (e) { return ui.alert('尚未完成資料庫設定', '請先在 Supabase 執行 supabase/registration_notify.sql，再啟用通知信。\n\n' + friendly(e), ui.ButtonSet.OK); }
   p.setProperties({ SITE_URL: site, NOTIFY_ON: '1' });
+  ensureNoticeTrigger();
   ui.alert('已啟用報名成功通知信',
-    '之後每次同步（每 ' + AUTO_MINUTES + ' 分鐘）會自動寄信給尚未收到通知的線上報名者。\n' +
+    '之後每 ' + NOTICE_MINUTES + ' 分鐘會自動寄信給尚未收到通知的線上報名者（此檢查不會更新試算表）。\n' +
     '寄件者：' + Session.getEffectiveUser().getEmail() + '\n今日剩餘寄信額度：' + MailApp.getRemainingDailyQuota() + ' 封\n\n' +
-    '建議先執行「寄送測試通知信給我」確認信件內容；並請確認已啟用自動同步。', ui.ButtonSet.OK);
+    '建議先執行「寄送測試通知信給我」確認信件內容。', ui.ButtonSet.OK);
 }
 function disableNotify() {
   PropertiesService.getScriptProperties().deleteProperty('NOTIFY_ON');
+  deleteTriggers('autoNotify');
   SpreadsheetApp.getUi().alert('已停用報名成功通知信。報名資料同步不受影響。');
 }
 function sendTestNotice() {
