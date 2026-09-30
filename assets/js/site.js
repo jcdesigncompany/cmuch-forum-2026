@@ -1,4 +1,4 @@
-import { loadContent, sb } from "./common.js?v=20260930c";
+import { loadContent, sb } from "./common.js?v=20260930d";
 (async function(){
 "use strict";
 var $=function(s,r){return (r||document).querySelector(s)};

@@ -1,4 +1,4 @@
-import { sb, configured, loadContent, esc, $, dateZh, errMsg, validTwId, phoneDigits } from "./common.js?v=20260930c";
+import { sb, configured, loadContent, esc, $, dateZh, errMsg, validTwId, phoneDigits } from "./common.js?v=20260930d";
 
 const app = $("#app");
 let S;

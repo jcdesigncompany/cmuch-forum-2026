@@ -1,5 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/+esm";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260930c";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260930d";
 
 function isSecretKey(k) {
   if (/^sb_secret_/.test(k)) return true;

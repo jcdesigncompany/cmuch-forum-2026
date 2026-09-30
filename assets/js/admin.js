@@ -1,4 +1,4 @@
-import { sb, configured, secretKeyError, configProblem, MEAL, validTwId, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js?v=20260930c";
+import { sb, configured, secretKeyError, configProblem, MEAL, validTwId, esc, $, $$, CAT, TRACKS, dateZh, toMin, tpTime, tpStamp, toast, loadContent, drawQR, ticketCard, downloadCanvas, downloadText, loadScript, JSQR_LIB, ZIP_LIB, errMsg } from "./common.js?v=20260930d";
 
 const app = $("#app");
 const ROLE_NAME = { admin: "管理者", checkin: "報到人員", viewer: "檢視者", pending: "待審核", none: "未授權" };
@@ -268,7 +268,7 @@ function overviewView() {
   const nToday = online.filter(r => tpDay(r.created_at) === today).length, nWeek = online.filter(r => tpDay(r.created_at) >= wk).length;
   const latest = online.slice().sort((a, b) => a.created_at < b.created_at ? 1 : -1).slice(0, 8);
   const SRC = { online: "線上報名", import: "名單匯入", manual: "人工建檔" };
-  const S = st.sync, stale = S && S.last_sync_at && (Date.now() - new Date(S.last_sync_at)) > 20 * 60e3;
+  const S = st.sync, stale = S && S.last_sync_at && (Date.now() - new Date(S.last_sync_at)) > 5 * 3600e3;
   return `<div class="ovhead"><h2>報名概況</h2><span class="regstate ${R.open ? "on" : ""}">${R.open ? "● 報名開放中" : "○ 報名未開放"}</span>${isAdmin() && st.C ? `<button class="btn sm" data-act="togglereg">${R.open ? "關閉報名" : "開放報名"}</button>` : ""}<a class="btn sm" href="register.html" target="_blank" rel="noopener">檢視報名頁</a></div>
   <dl class="kpis"><div class="kpi"><dt>報名人數${cap ? "／上限" : ""}</dt><dd>${pre.length}${cap ? `<small> / ${cap}</small>` : ""}</dd>${cap ? `<div class="bar"><i style="width:${Math.min(100, pre.length / cap * 100)}%"></i></div>` : ""}</div>
     <div class="kpi"><dt>今日新增（線上）</dt><dd>${nToday}</dd></div><div class="kpi"><dt>近 7 日新增（線上）</dt><dd>${nWeek}</dd></div>
@@ -284,7 +284,7 @@ function overviewView() {
     <section class="panel"><h3>類別</h3>${hbars(Object.keys(CAT).map(k => [CAT[k], pre.filter(r => r.category === k).length]), pre.length, "類別")}</section>
     <section class="panel"><h3>報名來源</h3>${hbars(Object.keys(SRC).map(k => [SRC[k], pre.filter(r => r.source === k).length]), pre.length, "報名來源")}</section></div></div>
   <section class="panel" style="margin-top:18px"><h3>Google 雲端硬碟同步</h3>
-    ${S && S.last_sync_at ? `<p style="margin:0">最後同步：<b class="num">${esc(tpStamp(S.last_sync_at))}</b>（${S.last_count} 筆）${stale ? '　<span style="color:var(--amber);font-weight:700">! 已超過 20 分鐘未同步，請檢查試算表的自動同步設定</span>' : ""}</p>${S.sheet_url ? `<p style="margin:8px 0 0"><a class="btn sm" href="${esc(S.sheet_url)}" target="_blank" rel="noopener">開啟 Google 試算表</a></p>` : ""}`
+    ${S && S.last_sync_at ? `<p style="margin:0">最後同步：<b class="num">${esc(tpStamp(S.last_sync_at))}</b>（${S.last_count} 筆）${stale ? '　<span style="color:var(--amber);font-weight:700">! 已超過 5 小時未同步，請檢查試算表的自動同步設定</span>' : ""}</p>${S.sheet_url ? `<p style="margin:8px 0 0"><a class="btn sm" href="${esc(S.sheet_url)}" target="_blank" rel="noopener">開啟 Google 試算表</a></p>` : ""}`
       : '<p class="hint" style="margin:0">尚未完成同步設定。設定方式請見 README「Google 雲端硬碟同步」。</p>'}
     ${isAdmin() ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)"><p class="hint" style="margin:0 0 10px">同步金鑰讓 Google 試算表讀取報名資料。${S && S.secret_created_at ? `目前金鑰建立於 ${esc(tpStamp(S.secret_created_at))}。產生新金鑰後，舊金鑰立即失效。` : "尚未產生金鑰。"}</p>
       <div id="secretbox">${st.newSecret ? `<div class="note"><b>請立即複製此金鑰</b>，關閉或重新整理頁面後將無法再次查看。<div class="tools" style="margin:10px 0 0"><input id="secretval" readonly value="${esc(st.newSecret)}" style="flex:1 1 260px;min-height:40px;border:1.5px solid var(--line);border-radius:8px;padding:0 10px;font-family:var(--latin);font-size:13px"><button class="btn sm pri" data-act="copysecret">複製</button></div></div>` : `<button class="btn sm" data-act="rotatesecret">${S && S.secret_created_at ? "產生新同步金鑰" : "產生同步金鑰"}</button>`}</div></div>` : ""}
